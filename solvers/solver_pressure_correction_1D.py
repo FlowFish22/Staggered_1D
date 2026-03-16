@@ -72,10 +72,7 @@ def v_cor(w, r1, r2, r3, r4, R, L, d, gm, dx):
     # Safe numerator for the second term
     term2_num = safe_pow(R, gm) - safe_pow(L, gm)
     
-    # Avoid inf - inf or very small differences
-    if np.abs(term2_num) < EPS:
-        term2_num = 0.0
-    
+   
     term2 = term2_num / denom
     
     # Compute final corrected velocity
@@ -94,7 +91,7 @@ nu = 0.1
 gamma = 2.0
 rho_initial_condition = fv.initial_condition.gaussian_rho
 u_initial_condition = fv.initial_condition.constant_u
-case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 100, dt = 0.0001, ng = 1)
+case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 100, dt = 0.001, ng = 1)
 "-------initialization of the scheme--------------"
 a = case.a
 b = case.b
@@ -165,7 +162,7 @@ print(L1_tot)
 #------------------------
 """Time-looping begins"""
 #------------------------
-num_steps = 10000
+num_steps = 1000
 for n in range(num_steps):
     #Compute dual average of the discrete mass on the DUAL CELLS
     # rho_init_d = np.array([(0.5 * (rho_init[i+1]+rho_init[i])) for i in range(0,N-1)])

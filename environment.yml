@@ -1,0 +1,12 @@
+name: finite_volume
+channels:
+  - conda-forge
+  - defaults
+dependencies: # pkg_name=version=build
+  - matplotlib=3.9.*
+  - scipy
+  - numpy
+  - pip=24.2
+  - hatchling=1.25.0
+  - pip:
+    - -e .[dev] 

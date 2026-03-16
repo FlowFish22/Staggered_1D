@@ -27,6 +27,7 @@ def neg(a):
 
 EPS = 1e-12
 MAX_RHO = 1e6
+a_p = 0.0
 
 def safe_pow(x, p):
     """
@@ -34,7 +35,7 @@ def safe_pow(x, p):
     Ensures x is at least EPS to avoid NaN/inf from negative or zero guesses.
     """
     x = np.clip(x, EPS, MAX_RHO)
-    return np.exp(p * np.log(x))
+    return a_p * np.exp(p * np.log(x))
 
 def v_scpr(a, b, c, d, gm, dx):
     """
@@ -89,9 +90,9 @@ tf = 2.0
 kappa = 1.0
 nu = 0.1
 gamma = 2.0
-rho_initial_condition = fv.initial_condition.gaussian_rho
+rho_initial_condition = fv.initial_condition.constant_rho
 u_initial_condition = fv.initial_condition.constant_u
-case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 100, dt = 0.001, ng = 1)
+case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 100, dt = 0.0001, ng = 1)
 "-------initialization of the scheme--------------"
 a = case.a
 b = case.b

@@ -26,11 +26,13 @@ class initial_condition:
         u0 = np.cos(x)
         return (u0)
     """1D Gaussian"""
+    def constant_rho(x):
+        return 1.0 + np.zeros_like(x)
     def gaussian_rho(x):
         z = 2*x
-        return np.where(np.abs(z) < 1, 1.0 + np.exp(-1/(1 - z**2)), 1.0)
+        return np.where(np.abs(z) < 1.0, 1.0 + np.exp(-1/(1 - z**2)), 1.0)
     def constant_u(x):
-        u0 = 0.1 + np.zeros_like(x)
+        u0 = np.zeros_like(x)
         return (u0)
 
 

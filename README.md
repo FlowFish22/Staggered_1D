@@ -12,9 +12,9 @@ TODO: description of what you do in some details, with link to relevant docs.
 
 The repository is organized as follows:
 
-`demo/` Demonstration codes, which rely on the `finite_volume` package.
+`solvers/` contain the python script to solve 1D peoblems, which rely on the `finite_volume` package.
 
-`src/dirac_operator` Provides the `finite_volume` package. 
+`src/finite_volme.py` Provides the `finite_volume` package. 
 
 ## Development
 

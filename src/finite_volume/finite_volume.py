@@ -37,7 +37,7 @@ class initial_condition:
         return (rho)
     """Discontinouous plateau"""
     def plat_rho(x):
-        if x < 0.25 and x>0.75:
+        if x<0.25 or x>0.75:
             rho0 = 0.125
         else:
             rho0 = 1.875

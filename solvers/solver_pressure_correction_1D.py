@@ -27,6 +27,7 @@ def neg(a):
     return x
 
 EPS = 1e-12
+
 MAX_RHO = 1e6
 a_p = 1.0
 

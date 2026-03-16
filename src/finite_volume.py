@@ -32,10 +32,16 @@ class initial_condition:
     def constant_u(x):
         u0 = np.zeros_like(x)
         return (u0)
-    @staticmethod
     def constant_rho(x):
         rho =  1.0 + np.zeros_like(x)
         return (rho)
+    """Discontinouous plateau"""
+    def plat_rho(x):
+        if x < 0.25 and x>0.75:
+            rho0 = 0.125
+        else:
+            rho0 = 1.875
+        return rho0
 
 
 class computational_case:

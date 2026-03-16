@@ -12,6 +12,7 @@ from scipy.sparse import coo_array, bmat
 from scipy.optimize import root, anderson
 from scipy.sparse.linalg import spsolve, eigs
 
+
 import finite_volume.finite_volume as fv
 
 # Option 1: Load user input
@@ -27,7 +28,7 @@ def neg(a):
 
 EPS = 1e-12
 MAX_RHO = 1e6
-a_p = 0.0
+a_p = 1.0
 
 def safe_pow(x, p):
     """

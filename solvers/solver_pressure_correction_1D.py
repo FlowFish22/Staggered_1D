@@ -9,7 +9,7 @@ import scipy.integrate as spi
 import scipy.sparse.linalg as spm
 import numpy.linalg as numlin
 from scipy.sparse import coo_array, bmat
-from scipy.optimize import root, anderson
+from scipy.optimize import root, anderson, newton_krylov
 from scipy.sparse.linalg import spsolve, eigs
 
 
@@ -164,7 +164,7 @@ print(L1_tot)
 #------------------------
 """Time-looping begins"""
 #------------------------
-num_steps = 10000
+num_steps = 5
 for n in range(num_steps):
     #Compute dual average of the discrete mass on the DUAL CELLS
     # rho_init_d = np.array([(0.5 * (rho_init[i+1]+rho_init[i])) for i in range(0,N-1)])
@@ -197,6 +197,7 @@ for n in range(num_steps):
     #Prediction step: solve a linear system to get the intermediate effective vel. and the drift vel.
     #------------------------------------------------------------------------------------------------
     f_up = fv.convective_flux.flx_upwind
+    f_sm = fv.convective_flux.flx_smoothing
     per_bd = fv.boundary_condition.per_bd
     rho_0_per = per_bd(rho_0, nghost) #populating the ghost cells to compute fluxes on the external edges
     #Effective velocity part of the numerical flux on the interfaces including external edges
@@ -256,24 +257,46 @@ for n in range(num_steps):
 
         return f
 
+    def Fsm(r):
+        r = np.maximum(r, 1e-12)   # positivity safeguard
+
+        f = np.zeros_like(r)
+        N_d = N + 1 #number of cell interfaces including the boundary
+        for i in range(N):
+            ip = (i + 1) % N
+            im = (i - 1) % N
+
+            iR = i + 1
+            iL = i
+
+            dtlap = (r[ip] - 2.0 * r[i] + r[im]) * lda2
+
+            flx_r = f_sm(r[i], r[ip],
+                      v_cor(tw[iR], rho_0[ip], rho_0[i], rho_init[ip], rho_init[i], r[ip], r[i], dt, gamma, cell_size))
+            flx_l = f_sm(r[im], r[i],
+                      v_cor(tw[iL], rho_0[i], rho_0[im], rho_init[i], rho_init[im], r[i], r[im], dt, gamma, cell_size))
+            f[i] = lda * (flx_r - flx_l) - kappa * nu * dtlap  #- rho_0[i]
+
+        return f
     
     rho = rho_0.copy()
     max_iter = 100
     #Picard iteration for solving the non-linear problem for \rho^{n+1}
-    for k in range(max_iter):
+    # for k in range(max_iter):
 
-        r = F(rho)        # uses implicit flux evaluation
-        rho_new = rho_0 - r
-        r1 = (1.0 - 0.3) * rho + 0.3 * rho_new
-        if np.linalg.norm(rho_new - r1) < 1e-12:
-            break
+    #     r = F(rho)        # uses implicit flux evaluation
+    #     rho_new = rho_0 - r
+    #     r1 = (1.0 - 0.3) * rho + 0.3 * rho_new
+    #     if np.linalg.norm(rho_new - r1) < 1e-12:
+    #         break
 
-        rho = rho_new
+    #     rho = rho_new
     def G(r):
          return r - rho_0 + F(r)
     
-    rho = anderson(G, rho, 2, 0.9, maxiter=100, f_tol=1e-12)
+    # rho = anderson(G, rho, 2, 0.9, maxiter=100, f_tol=1e-12)
     #rho -= np.mean(rho) - np.mean(rho_0)
+    rho = newton_krylov(G, rho)
     rho_per = per_bd(rho, nghost)
     rho_init_per = per_bd(rho_init, nghost)
     """w^{n+1} correction"""

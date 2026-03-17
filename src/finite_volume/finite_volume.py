@@ -97,6 +97,15 @@ class convective_flux:
         u_neg = 0.5 * (np.fabs(u) - u)
         flx = r1 * u_pos - r2 * u_neg
         return flx
+    
+    def flx_smoothing(r1, r2, u):
+        """SMOOTHING OF THE CONVECTIVE FLUX FOR APPLYING NEWTON ITERATION"""
+        u_del = 1e-04 + np.pow(u, 2)
+        u_abs_smooth = np.sqrt(u_del)
+        u_pos_smooth = 0.5 * (u_abs_smooth + u)
+        u_neg_smooth = 0.5 * (u_abs_smooth - u)
+        flx_smooth = r1 * u_pos_smooth - r2 * u_neg_smooth
+        return flx_smooth
 class solver_assembly:
     """To assemble sparse matrices for explicit and implicit solvers"""
 

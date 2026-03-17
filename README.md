@@ -14,7 +14,7 @@ The repository is organized as follows:
 
 `solvers/` contain the python script to solve 1D peoblems, which rely on the `finite_volume` package.
 
-`src/finite_volme.py` Provides the `finite_volume` package. 
+`src/finite_volme` Provides the `finite_volume` package. 
 
 ## Development
 

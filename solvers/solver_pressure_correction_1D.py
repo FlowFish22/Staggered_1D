@@ -11,6 +11,7 @@ import numpy.linalg as numlin
 from scipy.sparse import coo_array, bmat
 from scipy.optimize import root, anderson, newton_krylov
 from scipy.sparse.linalg import spsolve, eigs
+from numba import njit
 
 
 import finite_volume.finite_volume as fv
@@ -31,12 +32,13 @@ EPS = 1e-12
 MAX_RHO = 1e6
 a_p = 1.0
 
+
 def safe_pow(x, p):
     """
     Safely raise x to the power gamma.
     Ensures x is at least EPS to avoid NaN/inf from negative or zero guesses.
     """
-    x = np.clip(x, EPS, MAX_RHO)
+    #x = np.clip(x, EPS, MAX_RHO)
     return a_p * np.exp(p * np.log(x))
 
 def v_scpr(a, b, c, d, gm, dx):
@@ -88,12 +90,12 @@ def v_cor(w, r1, r2, r3, r4, R, L, d, gm, dx):
 
 
 tf = 2.0
-kappa = 0.0
+kappa = 0.5
 nu = 0.1
 gamma = 2.0
-rho_initial_condition = fv.initial_condition.plat_rho
+rho_initial_condition = fv.initial_condition.gaussian_rho
 u_initial_condition = fv.initial_condition.constant_u
-case = fv.computational_case(a = 0.0, b = 1.0, Tf = 0.5, N = 10000, dt = 0.01, ng = 1)
+case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 1000, dt = 0.0001, ng = 1)
 "-------initialization of the scheme--------------"
 a = case.a
 b = case.b
@@ -282,22 +284,22 @@ for n in range(num_steps):
     rho = rho_0.copy()
     max_iter = 100
     #Picard iteration for solving the non-linear problem for \rho^{n+1}
-    # for k in range(max_iter):
+    for k in range(max_iter):
 
-    #     r = F(rho)        # uses implicit flux evaluation
-    #     rho_new = rho_0 - r
-    #     r1 = (1.0 - 0.3) * rho + 0.3 * rho_new
-    #     if np.linalg.norm(rho_new - r1) < 1e-12:
-    #         break
+        r = F(rho)        # uses implicit flux evaluation
+        rho_new = rho_0 - r
+        r1 = (1.0 - 0.3) * rho + 0.3 * rho_new
+        if np.linalg.norm(rho_new - r1) < 1e-12:
+            break
 
-    #     rho = rho_new
-    # def G(r):
-    #      return r - rho_0 + F(r)
+        rho = rho_new
+    def G(r):
+         return r - rho_0 + F(r)
     def Gsm(r):
-         return r - rho_0 + Fsm(r)
-    # rho = anderson(G, rho, 2, 0.9, maxiter=100, f_tol=1e-12)
+          return r - rho_0 + Fsm(r)
+    rho = anderson(G, rho, 2, 0.9, maxiter=100, f_tol=1e-12)
     #rho -= np.mean(rho) - np.mean(rho_0)
-    rho = newton_krylov(Gsm, rho)
+    #rho = newton_krylov(Gsm, rho, method='lgmres', inner_maxiter=15, outer_k=10, f_tol=1e-8)
     rho_per = per_bd(rho, nghost)
     rho_init_per = per_bd(rho_init, nghost)
     """w^{n+1} correction"""
@@ -314,12 +316,12 @@ tv[1:-1] = (rho_init[1:] - rho_init[:-1])/(cell_size * 0.5 * (rho_init[0] + rho_
 tv[0] = (rho_init[0] - rho_init[-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))                # left wrap
 tv[-1] = (rho_init[0] - rho_init[-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))               # right wrap to close periodicity
 ax.plot(x_prim, rho_0, label=r"$\rho$, T_final")
-ax.plot(x_dual, w_0, label=r"$w$, T_final")
+#ax.plot(x_dual, w_0, label=r"$w$, T_final")
 #ax.plot(x_dual, v_init, label=r"$v$, T_final")  
 u = w_0 + kappa * nu * v_init
 ax.plot(x_dual, u, label=r"$u$, T_final")
-#ax.plot(x_dual, v_init, label=r"$v$, T_final")
-#ax.plot(x_dual, tv, label=r"$\tilde{v}$, T_final")
+ax.plot(x_dual, v_init, label=r"$v$, T_final")
+ax.plot(x_dual, tv, label=r"$\tilde{v}$, T_final")
 ax.legend()
 L1_tot_final = np.sum(rho_0)
 error_tot = L1_tot - L1_tot_final

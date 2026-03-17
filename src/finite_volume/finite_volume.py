@@ -4,7 +4,7 @@ import math
 import numpy as np
 import scipy.integrate as spi
 from scipy.sparse import diags, csr_matrix, coo_matrix, coo_array, bmat
-
+from numba import njit
 
 class initial_condition:
     """Library of initial conditions."""
@@ -90,8 +90,8 @@ class convective_flux:
     def flx_upwind(r1, r2, u):
         """UPWIND flux"""
         #overflow safe clipping
-        r1 = np.clip(r1, 1e-12, 1e6) 
-        r2 = np.clip(r2, 1e-12, 1e6)
+        # r1 = np.clip(r1, 1e-12, 1e6) 
+        # r2 = np.clip(r2, 1e-12, 1e6)
         #---------------------------
         u_pos = 0.5 * (np.fabs(u) + u)
         u_neg = 0.5 * (np.fabs(u) - u)

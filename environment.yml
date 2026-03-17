@@ -8,5 +8,6 @@ dependencies: # pkg_name=version=build
   - numpy
   - pip=24.2
   - hatchling=1.25.0
+  - numba=0.64.0
   - pip:
     - -e .[dev] 

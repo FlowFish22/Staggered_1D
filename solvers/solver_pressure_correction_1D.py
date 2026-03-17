@@ -93,7 +93,7 @@ nu = 0.1
 gamma = 2.0
 rho_initial_condition = fv.initial_condition.plat_rho
 u_initial_condition = fv.initial_condition.constant_u
-case = fv.computational_case(a = 0.0, b = 1.0, Tf = 0.5, N = 100, dt = 0.00001, ng = 1)
+case = fv.computational_case(a = 0.0, b = 1.0, Tf = 0.5, N = 10000, dt = 0.01, ng = 1)
 "-------initialization of the scheme--------------"
 a = case.a
 b = case.b
@@ -164,7 +164,7 @@ print(L1_tot)
 #------------------------
 """Time-looping begins"""
 #------------------------
-num_steps = 5
+num_steps = 1000
 for n in range(num_steps):
     #Compute dual average of the discrete mass on the DUAL CELLS
     # rho_init_d = np.array([(0.5 * (rho_init[i+1]+rho_init[i])) for i in range(0,N-1)])
@@ -291,12 +291,13 @@ for n in range(num_steps):
     #         break
 
     #     rho = rho_new
-    def G(r):
-         return r - rho_0 + F(r)
-    
+    # def G(r):
+    #      return r - rho_0 + F(r)
+    def Gsm(r):
+         return r - rho_0 + Fsm(r)
     # rho = anderson(G, rho, 2, 0.9, maxiter=100, f_tol=1e-12)
     #rho -= np.mean(rho) - np.mean(rho_0)
-    rho = newton_krylov(G, rho)
+    rho = newton_krylov(Gsm, rho)
     rho_per = per_bd(rho, nghost)
     rho_init_per = per_bd(rho_init, nghost)
     """w^{n+1} correction"""

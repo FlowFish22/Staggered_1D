@@ -4,7 +4,6 @@ import math
 import numpy as np
 import scipy.integrate as spi
 from scipy.sparse import diags, csr_matrix, coo_matrix, coo_array, bmat
-from numba import njit
 
 class initial_condition:
     """Library of initial conditions."""

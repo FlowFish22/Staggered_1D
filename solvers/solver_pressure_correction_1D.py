@@ -96,7 +96,7 @@ nu = 0.1
 gamma = 2.0
 rho_initial_condition = fv.initial_condition.gaussian_rho
 u_initial_condition = fv.initial_condition.constant_u
-case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 100, dt = 0.1, ng = 1)
+case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 1000, dt = 0.01, ng = 1)
 "-------initialization of the scheme--------------"
 a = case.a
 b = case.b
@@ -168,7 +168,7 @@ print(L1_tot)
 #------------------------
 """Time-looping begins"""
 #------------------------
-num_steps = 10
+num_steps = 100
 for n in range(num_steps):
     #Compute dual average of the discrete mass on the DUAL CELLS
     # rho_init_d = np.array([(0.5 * (rho_init[i+1]+rho_init[i])) for i in range(0,N-1)])
@@ -284,7 +284,7 @@ for n in range(num_steps):
         return f
     
     rho = rho_0.copy()
-    max_iter = 50
+    max_iter = 10
     #Picard iteration for solving the non-linear problem for \rho^{n+1}
     # for k in range(max_iter):
 
@@ -301,7 +301,7 @@ for n in range(num_steps):
     def Gsm(r):
           return r - rho_0 + Fsm(r)
     #rho = anderson(G, rho, 2, 0.9, maxiter=50, f_tol=1e-12)
-    rho = newton_krylov(Gsm, rho, method='lgmres', inner_maxiter=15, outer_k=10, f_tol=1e-8)
+    rho = newton_krylov(Gsm, rho, method='lgmres', inner_maxiter=2, outer_k=10, f_tol=1e-8)
     rho_per = per_bd(rho, nghost)
     rho_init_per = per_bd(rho_init, nghost)
     """w^{n+1} correction"""
@@ -330,7 +330,7 @@ error_tot = L1_tot - L1_tot_final
 print(np.abs(error_tot)) 
 print(L1_tot_final)
 error_v = v_init - tv
-norm_error_v = math.sqrt(cell_size) * np.abs(error_v)
+norm_error_v = math.sqrt(cell_size) * np.abs(error_v)#requires fixing
 print("error_v:", norm_error_v)
 T_f = num_steps * dt
 print("Final T:", T_f)

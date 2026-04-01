@@ -22,7 +22,7 @@ class initial_condition:
         #u0 = 1.0 + np.cos(x) #np.zeros_like(x)
         return (rho0)
     def sine_wave_u(x):
-        u0 = np.cos(x)
+        u0 = np.sin(x)
         return (u0)
     """1D Gaussian"""
     def gaussian_rho(x):
@@ -41,6 +41,13 @@ class initial_condition:
         else:
             rho0 = 1.875
         return rho0
+    """Rarefaction wave problem - discontinuous velocity"""
+    def rare_u(x):
+        if x<0.0:
+            u0 = -3.0 + np.zeros_like(x)
+        else:
+            u0 = 3.0 + np.zeros_like(x)
+        return u0
 
 
 class computational_case:

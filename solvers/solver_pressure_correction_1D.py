@@ -94,9 +94,9 @@ tf = 2.0
 kappa = 0.5
 nu = 0.1
 gamma = 2.0
-rho_initial_condition = fv.initial_condition.gaussian_rho
-u_initial_condition = fv.initial_condition.constant_u
-case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 500, dt = 0.01, ng = 1)
+rho_initial_condition = fv.initial_condition.constant_rho
+u_initial_condition = fv.initial_condition.sine_wave_u
+case = fv.computational_case(a = 0.0, b = 2.0 * np.pi, Tf = 0.5, N = 100, dt = 0.01, ng = 1)
 "-------initialization of the scheme--------------"
 a = case.a
 b = case.b
@@ -168,7 +168,7 @@ print(L1_tot)
 #------------------------
 """Time-looping begins"""
 #------------------------
-num_steps = 100
+num_steps = 0
 for n in range(num_steps):
     #Compute dual average of the discrete mass on the DUAL CELLS
     # rho_init_d = np.array([(0.5 * (rho_init[i+1]+rho_init[i])) for i in range(0,N-1)])
@@ -322,8 +322,8 @@ ax.plot(x_prim, rho_0, label=r"$\rho$, T_final")
 #ax.plot(x_dual, v_init, label=r"$v$, T_final")  
 u = w_0 + kappa * nu * v_init
 ax.plot(x_dual, u, label=r"$u$, T_final")
-ax.plot(x_dual, v_init, label=r"$v$, T_final")
-ax.plot(x_dual, tv, label=r"$\tilde{v}$, T_final")
+#ax.plot(x_dual, v_init, label=r"$v$, T_final")
+#ax.plot(x_dual, tv, label=r"$\tilde{v}$, T_final")
 ax.legend()
 L1_tot_final = np.sum(rho_0)
 error_tot = L1_tot - L1_tot_final

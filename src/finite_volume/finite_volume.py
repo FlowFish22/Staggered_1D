@@ -22,7 +22,7 @@ class initial_condition:
         #u0 = 1.0 + np.cos(x) #np.zeros_like(x)
         return (rho0)
     def sine_wave_u(x):
-        u0 = np.sin(x)
+        u0 = - np.sin(x)
         return (u0)
     """1D Gaussian"""
     def gaussian_rho(x):

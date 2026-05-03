@@ -94,9 +94,9 @@ tf = 2.0
 kappa = 0.5
 nu = 0.1
 gamma = 2.0
-rho_initial_condition = fv.initial_condition.constant_rho
-u_initial_condition = fv.initial_condition.rare_u
-case = fv.computational_case(a = -1.0, b = 1.0, Tf = 0.5, N = 100, dt = 0.01, ng = 1)
+rho_initial_condition = fv.initial_condition.gaussian_rho
+u_initial_condition = fv.initial_condition.constant_u
+case = fv.computational_case(a = -1.0, b = 1.0, Tf = 0.5, N = 200, dt = 0.001, ng = 1)
 "-------initialization of the scheme--------------"
 a = case.a
 b = case.b
@@ -137,14 +137,14 @@ w_0 = u_0 - kappa * nu * v_init
 #----------------------------------plot discretized initial data--------------------------------------------------
 #x = np.linspace(0, 1, num=int(1e2))
 #rho0 = initial_condition(x)[1]
-f, ax = plt.subplots(layout="constrained")
-ax.plot(x_prim, rho_init, label=r"$\rho^-1$")
-ax.plot(x_dual, u_0, label=r"$u_0$")
+#f, ax = plt.subplots(layout="constrained")
+#ax.plot(x_prim, rho_init, label=r"$\rho^-1$")
+#ax.plot(x_dual, u_0, label=r"$u_0$")
 #ax.plot(x_dual, v_init, label=r"$\partial_x \ln(\rho)$")
 #ax.plot(x_dual, w_0, label=r"$w_0$")
-ax.set_xlabel("x")
-ax.set_title("Initial condition")
-ax.legend()
+#ax.set_xlabel("x")
+#ax.set_title("Initial condition")
+#ax.legend()
 #-------------------------------------------------------------------------------------------------------------------
 # """-----------------------Update steps---------------------"""
 # """Compute rho^0 (PRIMAL CELLS): solve a linear system"""
@@ -165,10 +165,19 @@ build_mtx = fv.solver_assembly.build_matrix
 # #------------------------------------------------------------------------------------------------------------------
 L1_tot = np.sum(rho_0)
 print(L1_tot)
+#Compute dual average of the discrete mass on the DUAL CELLS
+# rho_init_d = np.array([(0.5 * (rho_init[i+1]+rho_init[i])) for i in range(0,N-1)])
+rho_init_d = np.empty(len(rho_init)+1, dtype=rho_init.dtype)
+rho_init_d[1:-1] = 0.5 * (rho_init[1:] + rho_init[:-1])          
+rho_init_d[0] = 0.5 * (rho_init[0] + rho_init[-1])   # left wrap
+rho_init_d[-1] = 0.5 * (rho_init[0] + rho_init[-1])  # right wrap to close periodicity
+E_0 = np.sum(np.pow(rho_init,gamma)) + np.sum(0.5 * rho_init_d * v_init * v_init) + np.sum(0.5 * rho_init_d * w_0 * w_0)
+E_0 = E_0 * cell_size
 #------------------------
 """Time-looping begins"""
 #------------------------
-num_steps = 1
+num_steps = 1000
+energy = np.zeros(num_steps)
 for n in range(num_steps):
     #Compute dual average of the discrete mass on the DUAL CELLS
     # rho_init_d = np.array([(0.5 * (rho_init[i+1]+rho_init[i])) for i in range(0,N-1)])
@@ -311,20 +320,22 @@ for n in range(num_steps):
     rho_0 = rho.copy()
     w_0 = w.copy()
     v_init = v.copy()
+    E = np.sum(np.pow(rho_0,gamma)) + np.sum(0.5 * rho_0_d * v_init * v_init) + np.sum(0.5 * rho_0_d * w_0 * w_0)
+    energy[n] = E #np.abs(E_0 - E)/E_0
     print("step:", n)
 e = time.process_time()
 tv = np.empty(len(rho_init)+1, dtype=rho_init.dtype)
 tv[1:-1] = (rho_init[1:] - rho_init[:-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))          # normal differences
 tv[0] = (rho_init[0] - rho_init[-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))                # left wrap
 tv[-1] = (rho_init[0] - rho_init[-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))               # right wrap to close periodicity
-ax.plot(x_prim, rho_0, label=r"$\rho$, T_final")
+#ax.plot(x_prim, rho_0, label=r"$\rho$, T_final")
 #ax.plot(x_dual, w_0, label=r"$w$, T_final")
 #ax.plot(x_dual, v_init, label=r"$v$, T_final")  
 u = w_0 + kappa * nu * v_init
-ax.plot(x_dual, u, label=r"$u$, T_final")
+#ax.plot(x_dual, u, label=r"$u$, T_final")
 #ax.plot(x_dual, v_init, label=r"$v$, T_final")
 #ax.plot(x_dual, tv, label=r"$\tilde{v}$, T_final")
-ax.legend()
+#ax.legend()
 L1_tot_final = np.sum(rho_0)
 error_tot = L1_tot - L1_tot_final
 print(np.abs(error_tot)) 
@@ -333,6 +344,11 @@ error_v = v_init - tv
 norm_error_v = math.sqrt(cell_size) * np.abs(error_v)#requires fixing
 print("error_v:", norm_error_v)
 T_f = num_steps * dt
+plt.plot(energy)
+plt.xlabel("time step")
+plt.ylabel("relative energy")
+plt.yscale("log")
+plt.show()
 print("Final T:", T_f)
 print(e - s, 'seconds')
 

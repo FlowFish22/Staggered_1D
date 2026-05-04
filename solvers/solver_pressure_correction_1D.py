@@ -171,7 +171,7 @@ rho_init_d = np.empty(len(rho_init)+1, dtype=rho_init.dtype)
 rho_init_d[1:-1] = 0.5 * (rho_init[1:] + rho_init[:-1])          
 rho_init_d[0] = 0.5 * (rho_init[0] + rho_init[-1])   # left wrap
 rho_init_d[-1] = 0.5 * (rho_init[0] + rho_init[-1])  # right wrap to close periodicity
-E_0 = np.sum(np.pow(rho_init,gamma)) + np.sum(0.5 * rho_init_d * v_init * v_init) + np.sum(0.5 * rho_init_d * w_0 * w_0)
+E_0 = np.sum(np.pow(rho_init,gamma)) + np.sum(0.5 * 0.5 * kappa * nu * nu * (1.0 - kappa) * rho_init_d * v_init * v_init) + np.sum(0.5 * rho_init_d * w_0 * w_0)
 E_0 = E_0 * cell_size
 #------------------------
 """Time-looping begins"""
@@ -320,8 +320,9 @@ for n in range(num_steps):
     rho_0 = rho.copy()
     w_0 = w.copy()
     v_init = v.copy()
-    E = np.sum(np.pow(rho_0,gamma)) + np.sum(0.5 * rho_0_d * v_init * v_init) + np.sum(0.5 * rho_0_d * w_0 * w_0)
-    energy[n] = E #np.abs(E_0 - E)/E_0
+    E = np.sum(np.pow(rho_0,gamma)) + np.sum(0.5 * kappa * nu * nu * (1.0 - kappa) * rho_0_d * v_init * v_init) + np.sum(0.5 * rho_0_d * w_0 * w_0)
+    E = E * cell_size
+    energy[n] = E #abs(E_0 - E)/E_0
     print("step:", n)
 e = time.process_time()
 tv = np.empty(len(rho_init)+1, dtype=rho_init.dtype)
@@ -345,8 +346,8 @@ norm_error_v = math.sqrt(cell_size) * np.abs(error_v)#requires fixing
 print("error_v:", norm_error_v)
 T_f = num_steps * dt
 plt.plot(energy)
-plt.xlabel("time step")
-plt.ylabel("relative energy")
+plt.xlabel("time steps")
+plt.ylabel("Total $\kappa$-entropy")
 plt.yscale("log")
 plt.show()
 print("Final T:", T_f)

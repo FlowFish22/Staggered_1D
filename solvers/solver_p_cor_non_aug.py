@@ -89,7 +89,7 @@ def v_cor(w, r1, r2, r3, r4, R, L, d, gm, dx):
 
 tf = 2.0
 kappa = 0.5
-nu = 0.1
+nu = 1.0
 gamma = 2.0
 rho_initial_condition = fv.initial_condition.constant_rho
 u_initial_condition = fv.initial_condition.rare_u

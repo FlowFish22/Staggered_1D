@@ -91,8 +91,8 @@ def v_cor(w, r1, r2, r3, r4, R, L, d, gm, dx):
 
 
 tf = 2.0
-kappa = 0.5
-nu = 0.1
+kappa = 0.0
+nu = 1.0
 gamma = 2.0
 rho_initial_condition = fv.initial_condition.gaussian_rho
 u_initial_condition = fv.initial_condition.constant_u
@@ -347,9 +347,10 @@ print("error_v:", norm_error_v)
 T_f = num_steps * dt
 plt.plot(energy)
 plt.xlabel("time steps")
-plt.ylabel("Total $\kappa$-entropy")
+plt.ylabel("Total energy")
 plt.yscale("log")
 plt.show()
+plt.savefig('Energy_p-cor.png')
 print("Final T:", T_f)
 print(e - s, 'seconds')
 

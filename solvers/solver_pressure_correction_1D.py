@@ -91,12 +91,12 @@ def v_cor(w, r1, r2, r3, r4, R, L, d, gm, dx):
 
 
 tf = 2.0
-kappa = 0.0
+kappa = 0.5
 nu = 1.0
 gamma = 2.0
 rho_initial_condition = fv.initial_condition.gaussian_rho
 u_initial_condition = fv.initial_condition.constant_u
-case = fv.computational_case(a = -1.0, b = 1.0, Tf = 0.5, N = 200, dt = 0.001, ng = 1)
+case = fv.computational_case(a = -2.0, b = 2.0, Tf = 0.5, N = 200, dt = 0.001, ng = 1)
 "-------initialization of the scheme--------------"
 a = case.a
 b = case.b
@@ -137,9 +137,9 @@ w_0 = u_0 - kappa * nu * v_init
 #----------------------------------plot discretized initial data--------------------------------------------------
 #x = np.linspace(0, 1, num=int(1e2))
 #rho0 = initial_condition(x)[1]
-#f, ax = plt.subplots(layout="constrained")
-#ax.plot(x_prim, rho_init, label=r"$\rho^-1$")
-#ax.plot(x_dual, u_0, label=r"$u_0$")
+f, ax = plt.subplots(layout="constrained")
+# ax.plot(x_prim, rho_init, label=r"$\rho^-1$")
+# ax.plot(x_dual, u_0, label=r"$u_0$")
 #ax.plot(x_dual, v_init, label=r"$\partial_x \ln(\rho)$")
 #ax.plot(x_dual, w_0, label=r"$w_0$")
 #ax.set_xlabel("x")
@@ -178,6 +178,7 @@ E_0 = E_0 * cell_size
 #------------------------
 num_steps = 1000
 energy = np.zeros(num_steps)
+tm = np.zeros(num_steps)
 for n in range(num_steps):
     #Compute dual average of the discrete mass on the DUAL CELLS
     # rho_init_d = np.array([(0.5 * (rho_init[i+1]+rho_init[i])) for i in range(0,N-1)])
@@ -295,20 +296,20 @@ for n in range(num_steps):
     rho = rho_0.copy()
     max_iter = 10
     #Picard iteration for solving the non-linear problem for \rho^{n+1}
-    # for k in range(max_iter):
+    for k in range(max_iter):
 
-    #     r = F(rho)        # uses implicit flux evaluation
-    #     rho_new = rho_0 - r
-    #     r1 = (1.0 - 0.3) * rho + 0.3 * rho_new
-    #     if np.linalg.norm(rho_new - r1) < 1e-12:
-    #         break
+        r = F(rho)        # uses implicit flux evaluation
+        rho_new = rho_0 - r
+        r1 = (1.0 - 0.3) * rho + 0.3 * rho_new
+        if np.linalg.norm(rho_new - r1) < 1e-12:
+            break
 
-    #     rho = rho_new
-    # def G(r):
-    #      return r - rho_0 + F(r)
+        rho = rho_new
+    def G(r):
+         return r - rho_0 + F(r)
     
     def Gsm(r):
-          return r - rho_0 + Fsm(r)
+       return r - rho_0 + Fsm(r)
     #rho = anderson(G, rho, 2, 0.9, maxiter=50, f_tol=1e-12)
     rho = newton_krylov(Gsm, rho, method='lgmres', inner_maxiter=2, outer_k=10, f_tol=1e-8)
     rho_per = per_bd(rho, nghost)
@@ -323,6 +324,7 @@ for n in range(num_steps):
     E = np.sum(np.pow(rho_0,gamma)) + np.sum(0.5 * kappa * nu * nu * (1.0 - kappa) * rho_0_d * v_init * v_init) + np.sum(0.5 * rho_0_d * w_0 * w_0)
     E = E * cell_size
     energy[n] = E #abs(E_0 - E)/E_0
+    tm[n] = dt * n
     print("step:", n)
 e = time.process_time()
 tv = np.empty(len(rho_init)+1, dtype=rho_init.dtype)
@@ -336,7 +338,7 @@ u = w_0 + kappa * nu * v_init
 #ax.plot(x_dual, u, label=r"$u$, T_final")
 #ax.plot(x_dual, v_init, label=r"$v$, T_final")
 #ax.plot(x_dual, tv, label=r"$\tilde{v}$, T_final")
-#ax.legend()
+ax.legend()
 L1_tot_final = np.sum(rho_0)
 error_tot = L1_tot - L1_tot_final
 print(np.abs(error_tot)) 
@@ -345,12 +347,16 @@ error_v = v_init - tv
 norm_error_v = math.sqrt(cell_size) * np.abs(error_v)#requires fixing
 print("error_v:", norm_error_v)
 T_f = num_steps * dt
-plt.plot(energy)
-plt.xlabel("time steps")
-plt.ylabel("Total energy")
-plt.yscale("log")
-plt.show()
-plt.savefig('Energy_p-cor.png')
+ax.plot(tm, energy, label=r"Total $\kappa$-entropy")
+ax.set_xlabel(r"$t$")
+ax.set_ylabel(r"Total $\kappa$-entropy")
+ax.legend()
+#plt.plot(energy)
+#plt.xlabel("time steps")
+#plt.ylabel("Total energy")
+#plt.yscale("log")
+#plt.show()
+f.savefig('kappa-Entropy_stability_augmented.png')
 print("Final T:", T_f)
 print(e - s, 'seconds')
 

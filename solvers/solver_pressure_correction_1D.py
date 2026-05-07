@@ -91,12 +91,12 @@ def v_cor(w, r1, r2, r3, r4, R, L, d, gm, dx):
 
 
 tf = 2.0
-kappa = 0.5
+kappa = 0.25
 nu = 1.0
 gamma = 2.0
 rho_initial_condition = fv.initial_condition.gaussian_rho
 u_initial_condition = fv.initial_condition.constant_u
-case = fv.computational_case(a = -2.0, b = 2.0, Tf = 0.5, N = 200, dt = 0.001, ng = 1)
+case = fv.computational_case(a = -2.0, b = 2.0, Tf = 0.5, N = 100, dt = 0.001, ng = 1)
 "-------initialization of the scheme--------------"
 a = case.a
 b = case.b
@@ -171,7 +171,7 @@ rho_init_d = np.empty(len(rho_init)+1, dtype=rho_init.dtype)
 rho_init_d[1:-1] = 0.5 * (rho_init[1:] + rho_init[:-1])          
 rho_init_d[0] = 0.5 * (rho_init[0] + rho_init[-1])   # left wrap
 rho_init_d[-1] = 0.5 * (rho_init[0] + rho_init[-1])  # right wrap to close periodicity
-E_0 = np.sum(np.pow(rho_init,gamma)) + np.sum(0.5 * 0.5 * kappa * nu * nu * (1.0 - kappa) * rho_init_d * v_init * v_init) + np.sum(0.5 * rho_init_d * w_0 * w_0)
+E_0 = np.sum(np.pow(rho_init,gamma)) + np.sum(0.5 * kappa * nu * nu * (1.0 - kappa) * rho_init_d * v_init * v_init) + np.sum(0.5 * rho_init_d * w_0 * w_0)
 E_0 = E_0 * cell_size
 #------------------------
 """Time-looping begins"""
@@ -323,7 +323,7 @@ for n in range(num_steps):
     v_init = v.copy()
     E = np.sum(np.pow(rho_0,gamma)) + np.sum(0.5 * kappa * nu * nu * (1.0 - kappa) * rho_0_d * v_init * v_init) + np.sum(0.5 * rho_0_d * w_0 * w_0)
     E = E * cell_size
-    energy[n] = E #abs(E_0 - E)/E_0
+    energy[n] = E/E_0
     tm[n] = dt * n
     print("step:", n)
 e = time.process_time()

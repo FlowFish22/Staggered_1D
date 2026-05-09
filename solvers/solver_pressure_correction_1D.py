@@ -91,7 +91,7 @@ def v_cor(w, r1, r2, r3, r4, R, L, d, gm, dx):
 
 
 tf = 2.0
-kappa = 0.25
+kappa = 0.1
 nu = 1.0
 gamma = 2.0
 rho_initial_condition = fv.initial_condition.gaussian_rho
@@ -356,7 +356,10 @@ ax.legend()
 #plt.ylabel("Total energy")
 #plt.yscale("log")
 #plt.show()
-f.savefig('kappa-Entropy_stability_augmented.png')
+with open("engy_k_0p1.dat", "w") as f:
+    for item in energy:
+        f.write(f"{item}\n")
+#f.savefig('kappa-Entropy_stability_augmented.png')
 print("Final T:", T_f)
 print(e - s, 'seconds')
 

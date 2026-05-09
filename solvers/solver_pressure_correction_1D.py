@@ -91,7 +91,7 @@ def v_cor(w, r1, r2, r3, r4, R, L, d, gm, dx):
 
 
 tf = 2.0
-kappa = 0.25
+kappa = 0.7
 nu = 1.0
 gamma = 2.0
 rho_initial_condition = fv.initial_condition.gaussian_rho
@@ -358,7 +358,7 @@ ax.legend()
 #plt.show()
 out = np.column_stack((tm, energy))
 np.savetxt(
-    "kappa_0p25.dat",
+    "kappa_0p6.dat",
     out
 )
 #f.savefig('kappa-Entropy_stability_augmented.png')

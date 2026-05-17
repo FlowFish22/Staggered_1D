@@ -91,12 +91,12 @@ def v_cor(w, r1, r2, r3, r4, R, L, d, gm, dx):
 
 
 tf = 2.0
-kappa = 0.00001
+kappa = 0.01
 nu = 0.1
 gamma = 2.0
 rho_initial_condition = fv.initial_condition.gaussian_rho
 u_initial_condition = fv.initial_condition.constant_u
-case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 10000, dt = 0.0005, ng = 1)
+case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 10000, dt = 0.00005, ng = 1)
 "-------initialization of the scheme--------------"
 a = case.a
 b = case.b
@@ -176,7 +176,7 @@ E_0 = E_0 * cell_size
 #------------------------
 """Time-looping begins"""
 #------------------------
-num_steps = 1000
+num_steps = 4000
 energy = np.zeros(num_steps)
 tm = np.zeros(num_steps)
 for n in range(num_steps):
@@ -344,8 +344,9 @@ error_tot = L1_tot - L1_tot_final
 print(np.abs(error_tot)) 
 print(L1_tot_final)
 error_v = v_init - tv
-norm_error_v = math.sqrt(cell_size) * np.abs(error_v)#requires fixing
-print("error_v:", np.max(norm_error_v))
+error_l2_sq = np.sum(error_v**2) * cell_size
+l2_norm_error_v = math.sqrt(error_l2_sq)
+print("error_v:", l2_norm_error_v)
 T_f = num_steps * dt
 # ax.plot(tm, energy, label=r"Total $\kappa$-entropy")
 # ax.set_xlabel(r"$t$")

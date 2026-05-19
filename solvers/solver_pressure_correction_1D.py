@@ -91,8 +91,8 @@ def v_cor(w, r1, r2, r3, r4, R, L, d, gm, dx):
 
 
 tf = 2.0
-kappa = 0.001
-nu = 0.1
+kappa = 0.5
+nu = 0.0
 gamma = 2.0
 rho_initial_condition = fv.initial_condition.gaussian_rho
 u_initial_condition = fv.initial_condition.constant_u
@@ -176,7 +176,7 @@ E_0 = E_0 * cell_size
 #------------------------
 """Time-looping begins"""
 #------------------------
-num_steps = 100
+num_steps = 200
 energy = np.zeros(num_steps)
 tm = np.zeros(num_steps)
 for n in range(num_steps):
@@ -294,30 +294,27 @@ for n in range(num_steps):
         return f
     
     rho = rho_0.copy()
-    max_iter = 50
+    max_iter = 100
     #Picard iteration for solving the non-linear problem for \rho^{n+1}
     for k in range(max_iter):
 
         r = F(rho)        # uses implicit flux evaluation
+        
         rho_new = rho_0 - r
-        rho_relaxed = (1.0 - 0.05) * rho + 0.05 * rho_new
 
-        rho_relaxed = np.maximum(rho_relaxed, EPS)
+        r1 = (1.0 - 0.0003) * rho + 0.0003 * rho_new
 
-        err = np.linalg.norm(rho_relaxed - rho)
-
-        if err < 1e-12:
-            rho = rho_relaxed
+        if np.linalg.norm(rho_new-r1) < 1e-12: 
             break
 
-    rho = rho_relaxed
+        rho = rho_new
     def G(r):
          return r - rho_0 + F(r)
     
     def Gsm(r):
        return r - rho_0 + Fsm(r)
     #rho = anderson(G, rho, 2, 0.9, maxiter=50, f_tol=1e-12)
-    #rho = newton_krylov(Gsm, rho, method='lgmres', inner_maxiter=2, outer_k=10, f_tol=1e-8)
+    rho = newton_krylov(Gsm, rho, method='lgmres', inner_maxiter=2, outer_k=10, f_tol=1e-8)
     rho_per = per_bd(rho, nghost)
     rho_init_per = per_bd(rho_init, nghost)
     """w^{n+1} correction"""

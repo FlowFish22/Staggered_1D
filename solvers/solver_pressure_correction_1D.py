@@ -40,7 +40,7 @@ def safe_pow(x, p):
     Ensures x is at least EPS to avoid NaN/inf from negative or zero guesses.
     """
     #x = np.clip(x, EPS, MAX_RHO)
-    return a_p * np.exp(p * np.log(x))
+    return a_p * np.power(x, p)
 
 def v_scpr(a, b, c, d, gm, dx):
     """
@@ -91,12 +91,12 @@ def v_cor(w, r1, r2, r3, r4, R, L, d, gm, dx):
 
 
 tf = 2.0
-kappa = 0.01
+kappa = 0.001
 nu = 0.1
 gamma = 2.0
 rho_initial_condition = fv.initial_condition.gaussian_rho
 u_initial_condition = fv.initial_condition.constant_u
-case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 10000, dt = 0.0005, ng = 1)
+case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 1000, dt = 0.01, ng = 1)
 "-------initialization of the scheme--------------"
 a = case.a
 b = case.b
@@ -176,7 +176,7 @@ E_0 = E_0 * cell_size
 #------------------------
 """Time-looping begins"""
 #------------------------
-num_steps = 400
+num_steps = 100
 energy = np.zeros(num_steps)
 tm = np.zeros(num_steps)
 for n in range(num_steps):
@@ -219,7 +219,7 @@ for n in range(num_steps):
     #Drift velocity part of the numerical flux on the interfaces including external edges
     f_dv = np.array([(rho_0[i+1] - rho_0[i])/cell_size for i in range(0,N-1)])
     f_dv = np.empty(len(rho_0)+1, dtype=rho_0.dtype)
-    f_dv[1:-1] = (rho_0[1] - rho_0[:-1])/cell_size           
+    f_dv[1:-1] = (rho_0[1:] - rho_0[:-1])/cell_size           
     f_dv[0] = (rho_0[0] - rho_0[-1])/cell_size # left wrap
     f_dv[-1] = (rho_0[0] - rho_0[-1])/cell_size  # right wrap to close periodicity
     
@@ -227,9 +227,9 @@ for n in range(num_steps):
     flx = f_ev - kappa * nu * f_dv
 
     """Matrix blocks corresponding to the linear system for solving tilde{w} and v"""
-    W1 = d_linsolv(flx, rho_0 * (1.0 + cell_size ** 8.0), c1, c2) #tilde{w} part of tilde{w} eqn
+    W1 = d_linsolv(flx, rho_0 * (1.0 + cell_size ** 16.0), c1, c2) #tilde{w} part of tilde{w} eqn
     V1 = d_linsolv_dif(rho_0, d) #v part of tilde{w} eqn
-    V2 = d_linsolv(flx, rho_0 * (1.0 + cell_size ** 8.0), c1, c3) #v part of v eqn
+    V2 = d_linsolv(flx, rho_0 * (1.0 + cell_size ** 16.0), c1, c3) #v part of v eqn
     W2 = d_linsolv_dif(rho_0, lda2) #tilde{w} part of w eqn
 
     M = build_mtx(W1,V1, W2, V2)
@@ -294,24 +294,30 @@ for n in range(num_steps):
         return f
     
     rho = rho_0.copy()
-    max_iter = 10
+    max_iter = 50
     #Picard iteration for solving the non-linear problem for \rho^{n+1}
     for k in range(max_iter):
 
         r = F(rho)        # uses implicit flux evaluation
         rho_new = rho_0 - r
-        r1 = (1.0 - 0.3) * rho + 0.3 * rho_new
-        if np.linalg.norm(rho_new - r1) < 1e-12:
+        rho_relaxed = (1.0 - 0.05) * rho + 0.05 * rho_new
+
+        rho_relaxed = np.maximum(rho_relaxed, EPS)
+
+        err = np.linalg.norm(rho_relaxed - rho)
+
+        if err < 1e-12:
+            rho = rho_relaxed
             break
 
-        rho = rho_new
+    rho = rho_relaxed
     def G(r):
          return r - rho_0 + F(r)
     
     def Gsm(r):
        return r - rho_0 + Fsm(r)
     #rho = anderson(G, rho, 2, 0.9, maxiter=50, f_tol=1e-12)
-    rho = newton_krylov(Gsm, rho, method='lgmres', inner_maxiter=2, outer_k=10, f_tol=1e-8)
+    #rho = newton_krylov(Gsm, rho, method='lgmres', inner_maxiter=2, outer_k=10, f_tol=1e-8)
     rho_per = per_bd(rho, nghost)
     rho_init_per = per_bd(rho_init, nghost)
     """w^{n+1} correction"""

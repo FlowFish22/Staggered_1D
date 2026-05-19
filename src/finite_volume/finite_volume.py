@@ -26,17 +26,19 @@ class initial_condition:
         return (u0)
     """1D Gaussian"""
     def gaussian_rho(x):
-        z = 2.0 * x
+        # z = 2.0 * x
 
-        rho = np.ones_like(z)
+        # rho = np.ones_like(z)
 
-        mask = np.abs(z) < 1.0
+        # mask = np.abs(z) < 1.0
 
-        zz = z[mask]
+        # zz = z[mask]
 
-        denom = np.maximum(1.0 - zz**2, 1e-14)
+        # denom = np.maximum(1.0 - zz**2, 1e-14)
 
-        rho[mask] += np.exp(-1.0 / denom)
+        # rho[mask] += np.exp(-1.0 / denom)
+        z = 2*x 
+        return np.where(np.abs(z) < 1.0, 1.0 + np.exp(-1/(1 - z**2)), 1.0)
 
         return rho
     def constant_u(x):

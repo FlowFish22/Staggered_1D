@@ -176,7 +176,7 @@ E_0 = E_0 * cell_size
 #------------------------
 """Time-looping begins"""
 #------------------------
-num_steps = 200
+num_steps = 1000
 energy = np.zeros(num_steps)
 tm = np.zeros(num_steps)
 for n in range(num_steps):
@@ -298,23 +298,28 @@ for n in range(num_steps):
     #Picard iteration for solving the non-linear problem for \rho^{n+1}
     for k in range(max_iter):
 
-        r = F(rho)        # uses implicit flux evaluation
-        
+        r = F(rho)
+
         rho_new = rho_0 - r
 
-        r1 = (1.0 - 0.0003) * rho + 0.0003 * rho_new
+        rho_relaxed = (1.0 - 0.005) * rho + 0.005 * rho_new
 
-        if np.linalg.norm(rho_new-r1) < 1e-12: 
+        rho_relaxed = np.maximum(rho_relaxed, EPS)
+
+        err = np.linalg.norm(rho_relaxed - rho)
+
+        if err < 1e-12:
+            rho = rho_relaxed
             break
 
-        rho = rho_new
+        rho = rho_relaxed
     def G(r):
          return r - rho_0 + F(r)
     
     def Gsm(r):
        return r - rho_0 + Fsm(r)
     #rho = anderson(G, rho, 2, 0.9, maxiter=50, f_tol=1e-12)
-    rho = newton_krylov(Gsm, rho, method='lgmres', inner_maxiter=2, outer_k=10, f_tol=1e-8)
+    #rho = newton_krylov(Gsm, rho, method='lgmres', inner_maxiter=2, outer_k=10, f_tol=1e-8)
     rho_per = per_bd(rho, nghost)
     rho_init_per = per_bd(rho_init, nghost)
     """w^{n+1} correction"""

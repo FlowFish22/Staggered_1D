@@ -92,11 +92,11 @@ def v_cor(w, r1, r2, r3, r4, R, L, d, gm, dx):
 
 tf = 2.0
 kappa = 0.5
-nu = 0.0
+nu = 0.1
 gamma = 2.0
 rho_initial_condition = fv.initial_condition.gaussian_rho
 u_initial_condition = fv.initial_condition.constant_u
-case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 100, dt = 0.01, ng = 1)
+case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 1000, dt = 0.001, ng = 1)
 "-------initialization of the scheme--------------"
 a = case.a
 b = case.b
@@ -176,7 +176,7 @@ E_0 = E_0 * cell_size
 #------------------------
 """Time-looping begins"""
 #------------------------
-num_steps = 50
+num_steps = 500
 energy = np.zeros(num_steps)
 tm = np.zeros(num_steps)
 for n in range(num_steps):
@@ -227,9 +227,9 @@ for n in range(num_steps):
     flx = f_ev - kappa * nu * f_dv
 
     """Matrix blocks corresponding to the linear system for solving tilde{w} and v"""
-    W1 = d_linsolv(flx, rho_0 * (1.0 + cell_size ** 0.025), c1, c2) #tilde{w} part of tilde{w} eqn
+    W1 = d_linsolv(flx, rho_0, c1, c2) #tilde{w} part of tilde{w} eqn
     V1 = d_linsolv_dif(rho_0, d) #v part of tilde{w} eqn
-    V2 = d_linsolv(flx, rho_0 * (1.0 + cell_size ** 0.025), c1, c3) #v part of v eqn
+    V2 = d_linsolv(flx, rho_0, c1, c3) #v part of v eqn
     W2 = d_linsolv_dif(rho_0, lda2) #tilde{w} part of w eqn
 
     M = build_mtx(W1,V1, W2, V2)
@@ -296,30 +296,30 @@ for n in range(num_steps):
     rho = rho_0.copy()
     max_iter = 100
     #Picard iteration for solving the non-linear problem for \rho^{n+1}
-    for k in range(max_iter):
+    # for k in range(max_iter):
 
-        r = F(rho)
+    #     r = F(rho)
 
-        rho_new = rho_0 - r
+    #     rho_new = rho_0 - r
 
-        rho_relaxed = (1.0 - 0.005) * rho + 0.005 * rho_new
+    #     rho_relaxed = (1.0 - 0.0005) * rho + 0.0005 * rho_new
 
-        rho_relaxed = np.maximum(rho_relaxed, EPS)
+    #     rho_relaxed = np.maximum(rho_relaxed, EPS)
 
-        err = np.linalg.norm(rho_relaxed - rho)
+    #     err = np.linalg.norm(rho_relaxed - rho)
 
-        if err < 1e-12:
-            rho = rho_relaxed
-            break
+    #     if err < 1e-12:
+    #         rho = rho_relaxed
+    #         break
 
-        rho = rho_relaxed
+    #     rho = rho_relaxed
     def G(r):
          return r - rho_0 + F(r)
     
     def Gsm(r):
        return r - rho_0 + Fsm(r)
     #rho = anderson(G, rho, 2, 0.9, maxiter=50, f_tol=1e-12)
-    #rho = newton_krylov(Gsm, rho, method='lgmres', inner_maxiter=2, outer_k=10, f_tol=1e-8)
+    rho = newton_krylov(Gsm, rho, method='lgmres', inner_maxiter=10, outer_k=50, f_tol=1e-12)
     rho_per = per_bd(rho, nghost)
     rho_init_per = per_bd(rho_init, nghost)
     """w^{n+1} correction"""

@@ -96,7 +96,7 @@ nu = 0.1
 gamma = 2.0
 rho_initial_condition = fv.initial_condition.gaussian_rho
 u_initial_condition = fv.initial_condition.constant_u
-case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 1000, dt = 0.001, ng = 1)
+case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 10000, dt = 0.01, ng = 1)
 "-------initialization of the scheme--------------"
 a = case.a
 b = case.b
@@ -176,7 +176,7 @@ E_0 = E_0 * cell_size
 #------------------------
 """Time-looping begins"""
 #------------------------
-num_steps = 500
+num_steps = 100
 energy = np.zeros(num_steps)
 tm = np.zeros(num_steps)
 for n in range(num_steps):
@@ -313,13 +313,15 @@ for n in range(num_steps):
     #         break
 
     #     rho = rho_relaxed
+    
+
     def G(r):
          return r - rho_0 + F(r)
     
     def Gsm(r):
        return r - rho_0 + Fsm(r)
     #rho = anderson(G, rho, 2, 0.9, maxiter=50, f_tol=1e-12)
-    rho = newton_krylov(Gsm, rho, method='lgmres', inner_maxiter=10, outer_k=50, f_tol=1e-12)
+    rho = newton_krylov(Gsm, rho, method='lgmres', inner_maxiter=2, outer_k=10, f_tol=1e-12)
     rho_per = per_bd(rho, nghost)
     rho_init_per = per_bd(rho_init, nghost)
     """w^{n+1} correction"""

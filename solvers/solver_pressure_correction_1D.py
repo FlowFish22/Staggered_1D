@@ -96,7 +96,7 @@ nu = 0.1
 gamma = 2.0
 rho_initial_condition = fv.initial_condition.gaussian_rho
 u_initial_condition = fv.initial_condition.constant_u
-case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 10000, dt = 0.01, ng = 1)
+case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 1000, dt = 0.0001, ng = 1)
 "-------initialization of the scheme--------------"
 a = case.a
 b = case.b
@@ -114,6 +114,7 @@ N_tstep = math.floor(tstep)
 c1 = lda * (1.0/4.0)
 c2 = nu * (1.0 - kappa) * lda2
 c3 = kappa * nu * lda2
+h_theta = (cell_size ** 0.5) * lda2
 d = kappa * (nu ** 2) * (1.0 - kappa) * lda2
 
 s = time.process_time()
@@ -176,7 +177,7 @@ E_0 = E_0 * cell_size
 #------------------------
 """Time-looping begins"""
 #------------------------
-num_steps = 100
+num_steps = 5000
 energy = np.zeros(num_steps)
 tm = np.zeros(num_steps)
 for n in range(num_steps):
@@ -227,9 +228,9 @@ for n in range(num_steps):
     flx = f_ev - kappa * nu * f_dv
 
     """Matrix blocks corresponding to the linear system for solving tilde{w} and v"""
-    W1 = d_linsolv(flx, rho_0, c1, c2) #tilde{w} part of tilde{w} eqn
+    W1 = d_linsolv(flx, rho_0, c1, (c2 + h_theta)) #tilde{w} part of tilde{w} eqn
     V1 = d_linsolv_dif(rho_0, d) #v part of tilde{w} eqn
-    V2 = d_linsolv(flx, rho_0, c1, c3) #v part of v eqn
+    V2 = d_linsolv(flx, rho_0, c1, (c3 + h_theta)) #v part of v eqn
     W2 = d_linsolv_dif(rho_0, lda2) #tilde{w} part of w eqn
 
     M = build_mtx(W1,V1, W2, V2)
@@ -238,7 +239,50 @@ for n in range(num_steps):
     rhs_tw = rho_init_d * w_0 - dt * sc_pr_grad #rhs of the w equation
     rhs_v = rho_init_d * v_init #rhs of the v equation
     rhs_dual = np.concatenate((rhs_tw, rhs_v)) #build the vector on right hand side
-    twv = spsolve(M, rhs_dual) #vector (tw, v)
+    # twv = spsolve(M, rhs_dual) #vector (tw, v)
+
+    from scipy.sparse.linalg import spilu, LinearOperator, gmres, bicgstab
+    # or use bicgstab / cg depending on your matrix properties
+
+
+    # Build ILU preconditioner
+    ilu = spilu(M, drop_tol=1e-4, fill_factor=8)
+
+    # Wrap ILU solve as a LinearOperator
+    M_prec = LinearOperator(M.shape, ilu.solve)
+
+    # # Iterative solve
+    # twv, info = gmres(
+    #     M,
+    #     rhs_dual,
+    #     M=M_prec,
+    #     rtol=1e-13,
+    #     atol=0,
+    #     restart=50,
+    #     maxiter=500
+    # )
+    # if info != 0:
+        # print(f"GMRES did not fully converge, info={info}")
+
+    twv, info = bicgstab(
+        M,
+        rhs_dual,
+        M=M_prec,
+        rtol=1e-13,
+        atol=0.0,
+        maxiter=500
+    )
+
+    if info == 0:
+        print("BiCGSTAB converged")
+    elif info > 0:
+        print(f"BiCGSTAB stopped after {info} iterations without convergence")
+    else:
+        print("BiCGSTAB failed due to numerical breakdown")
+
+    
+
+
     #twv -= twv.mean()
     tw, v = twv[:len(twv)//2], twv[len(twv)//2:]
     
@@ -321,7 +365,9 @@ for n in range(num_steps):
     def Gsm(r):
        return r - rho_0 + Fsm(r)
     #rho = anderson(G, rho, 2, 0.9, maxiter=50, f_tol=1e-12)
+    print("newton krylov solve ... ", flush=True, end='')
     rho = newton_krylov(Gsm, rho, method='lgmres', inner_maxiter=2, outer_k=10, f_tol=1e-12)
+    print("done!")
     rho_per = per_bd(rho, nghost)
     rho_init_per = per_bd(rho_init, nghost)
     """w^{n+1} correction"""

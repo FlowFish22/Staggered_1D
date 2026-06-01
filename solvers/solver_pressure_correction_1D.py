@@ -96,7 +96,7 @@ nu = 1.0
 gamma = 2.0
 rho_initial_condition = fv.initial_condition.gaussian_rho
 u_initial_condition = fv.initial_condition.constant_u
-case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 1000, dt = 0.01, ng = 1)
+case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 200, dt = 0.00001, ng = 1)
 "-------initialization of the scheme--------------"
 a = case.a
 b = case.b
@@ -177,7 +177,7 @@ E_0 = E_0 * cell_size
 #------------------------
 """Time-looping begins"""
 #------------------------
-num_steps = 100
+num_steps = 100000
 energy = np.zeros(num_steps)
 tm = np.zeros(num_steps)
 for n in range(num_steps):
@@ -228,9 +228,9 @@ for n in range(num_steps):
     flx = f_ev - kappa * nu * f_dv
 
     """Matrix blocks corresponding to the linear system for solving tilde{w} and v"""
-    W1 = d_linsolv(flx, rho_0, c1, (c2 + h_theta)) #tilde{w} part of tilde{w} eqn
+    W1 = d_linsolv(flx, rho_0, c1, c2) #tilde{w} part of tilde{w} eqn
     V1 = d_linsolv_dif(rho_0, d) #v part of tilde{w} eqn
-    V2 = d_linsolv(flx, rho_0, c1, (c3 + h_theta)) #v part of v eqn
+    V2 = d_linsolv(flx, rho_0, c1, c3) #v part of v eqn
     W2 = d_linsolv_dif(rho_0, lda2) #tilde{w} part of w eqn
 
     M = build_mtx(W1,V1, W2, V2)
@@ -389,11 +389,11 @@ tv[0] = (rho_init[0] - rho_init[-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[
 tv[-1] = (rho_init[0] - rho_init[-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))               # right wrap to close periodicity
 #ax.plot(x_prim, rho_0, label=r"$\rho$, T_final")
 #ax.plot(x_dual, w_0, label=r"$w$, T_final")
-ax.plot(x_dual, v_init, label=r"$v$, T_final")  
+ax.plot(x_dual, v_init, label=r"$v$")  
 u = w_0 + kappa * nu * v_init
 #ax.plot(x_dual, u, label=r"$u$, T_final")
 #ax.plot(x_dual, v_init, label=r"$v$, T_final")
-ax.plot(x_dual, tv, label=r"$\tilde{v}$, T_final")
+ax.plot(x_dual, tv, label=r"$\tilde{v}$")
 ax.legend()
 L1_tot_final = np.sum(rho_0)
 error_tot = L1_tot - L1_tot_final

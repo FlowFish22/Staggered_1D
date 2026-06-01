@@ -92,7 +92,7 @@ def v_cor(w, r1, r2, r3, r4, R, L, d, gm, dx):
 
 tf = 2.0
 kappa = 0.5
-nu = 0.1
+nu = 1.0
 gamma = 2.0
 rho_initial_condition = fv.initial_condition.gaussian_rho
 u_initial_condition = fv.initial_condition.constant_u
@@ -387,7 +387,7 @@ tv = np.empty(len(rho_init)+1, dtype=rho_init.dtype)
 tv[1:-1] = (rho_init[1:] - rho_init[:-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))          # normal differences
 tv[0] = (rho_init[0] - rho_init[-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))                # left wrap
 tv[-1] = (rho_init[0] - rho_init[-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))               # right wrap to close periodicity
-ax.plot(x_prim, rho_0, label=r"$\rho$, T_final")
+#ax.plot(x_prim, rho_0, label=r"$\rho$, T_final")
 #ax.plot(x_dual, w_0, label=r"$w$, T_final")
 ax.plot(x_dual, v_init, label=r"$v$, T_final")  
 u = w_0 + kappa * nu * v_init
@@ -418,7 +418,7 @@ np.savetxt(
     "kappa_0p6.dat",
     out
 )
-#f.savefig('kappa-Entropy_stability_augmented.png')
+f.savefig('v_vs_tilde_v.png')
 print("Final T:", T_f)
 print(e - s, 'seconds')
 

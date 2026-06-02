@@ -40,7 +40,9 @@ def safe_pow(x, p):
     Ensures x is at least EPS to avoid NaN/inf from negative or zero guesses.
     """
     #x = np.clip(x, EPS, MAX_RHO)
-    return a_p * np.power(x, p)
+    pr = a_p * np.power(x, p) - (1.0/8.0) * a_p * np.power(x, -8.0)
+    #return a_p * np.power(x, p)
+    return pr
 
 def v_scpr(a, b, c, d, gm, dx):
     """
@@ -96,7 +98,7 @@ nu = 1.0
 gamma = 2.0
 rho_initial_condition = fv.initial_condition.gaussian_rho
 u_initial_condition = fv.initial_condition.constant_u
-case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 200, dt = 0.00001, ng = 1)
+case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 800, dt = 0.0001, ng = 1)
 "-------initialization of the scheme--------------"
 a = case.a
 b = case.b
@@ -177,7 +179,7 @@ E_0 = E_0 * cell_size
 #------------------------
 """Time-looping begins"""
 #------------------------
-num_steps = 100000
+num_steps = 100
 energy = np.zeros(num_steps)
 tm = np.zeros(num_steps)
 for n in range(num_steps):
@@ -228,7 +230,7 @@ for n in range(num_steps):
     flx = f_ev - kappa * nu * f_dv
 
     """Matrix blocks corresponding to the linear system for solving tilde{w} and v"""
-    W1 = d_linsolv(flx, rho_0, c1, c2) #tilde{w} part of tilde{w} eqn
+    W1 = d_linsolv(flx, rho_0, c1, c2 + h_theta) #tilde{w} part of tilde{w} eqn
     V1 = d_linsolv_dif(rho_0, d) #v part of tilde{w} eqn
     V2 = d_linsolv(flx, rho_0, c1, c3) #v part of v eqn
     W2 = d_linsolv_dif(rho_0, lda2) #tilde{w} part of w eqn
@@ -379,7 +381,7 @@ for n in range(num_steps):
     v_init = v.copy()
     E = np.sum(np.pow(rho_0,gamma)) + np.sum(0.5 * kappa * nu * nu * (1.0 - kappa) * rho_0_d * v_init * v_init) + np.sum(0.5 * rho_0_d * w_0 * w_0)
     E = E * cell_size
-    energy[n] = E/E_0
+    energy[n] = E
     tm[n] = dt * n
     print("step:", n)
 e = time.process_time()
@@ -404,9 +406,9 @@ error_l2_sq = np.sum(error_v**2) * cell_size
 l2_norm_error_v = math.sqrt(error_l2_sq)
 print("error_v:", l2_norm_error_v)
 T_f = num_steps * dt
-# ax.plot(tm, energy, label=r"Total $\kappa$-entropy")
-# ax.set_xlabel(r"$t$")
-# ax.set_ylabel(r"Total $\kappa$-entropy")
+#ax.plot(tm, energy, label=r"Total $\kappa$-entropy")
+#ax.set_xlabel(r"$t$")
+#ax.set_ylabel(r"$E_\kappa(t)/E^0_kappa$")
 ax.legend()
 #plt.plot(energy)
 #plt.xlabel("time steps")
@@ -415,10 +417,10 @@ ax.legend()
 #plt.show()
 out = np.column_stack((tm, energy))
 np.savetxt(
-    "kappa_0p6.dat",
+    "kappa0p5_totEn.dat",
     out
 )
-f.savefig('v_vs_tilde_v.png')
+f.savefig('engy_kappa0p5.png')
 print("Final T:", T_f)
 print(e - s, 'seconds')
 

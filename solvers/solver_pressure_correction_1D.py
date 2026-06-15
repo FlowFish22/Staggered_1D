@@ -190,6 +190,12 @@ for n in range(num_steps):
     rho_init_d[0] = 0.5 * (rho_init[0] + rho_init[-1])   # left wrap
     rho_init_d[-1] = 0.5 * (rho_init[0] + rho_init[-1])  # right wrap to close periodicity
     
+    #\tilde_v with taking care of the offsetting
+    tv = np.empty(len(rho_init)+1, dtype=rho_init.dtype)
+    tv[1:-1] = (rho_init[1:] - rho_init[:-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))          # normal differences
+    tv[0] = (rho_init[0] - rho_init[-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))                # left wrap
+    tv[-1] = (rho_init[0] - rho_init[-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))               # right wrap to close periodicity
+    
     rho_0_d = np.empty(len(rho_0)+1, dtype=rho_0.dtype)
     rho_0_d[1:-1] = 0.5 * (rho_0[1:] + rho_0[:-1])          
     rho_0_d[0] = 0.5 * (rho_0[0] + rho_0[-1])   # left wrap
@@ -390,10 +396,6 @@ for n in range(num_steps):
     print("step:", n)
 e = time.process_time()
 v_update = v.copy()
-tv = np.empty(len(rho_init)+1, dtype=rho_init.dtype)
-tv[1:-1] = (rho_init[1:] - rho_init[:-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))          # normal differences
-tv[0] = (rho_init[0] - rho_init[-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))                # left wrap
-tv[-1] = (rho_init[0] - rho_init[-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))               # right wrap to close periodicity
 #ax.plot(x_prim, rho_0, label=r"$\rho$, T_final")
 #ax.plot(x_dual, w_0, label=r"$w$, T_final")
 #ax.plot(x_dual, v_update, label=r"$v$")  

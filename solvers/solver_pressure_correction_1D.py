@@ -98,7 +98,7 @@ nu = 1.0
 gamma = 2.0
 rho_initial_condition = fv.initial_condition.gaussian_rho
 u_initial_condition = fv.initial_condition.constant_u
-case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 320, dt = 0.00001, ng = 1)
+case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 1000, dt = 0.001, ng = 1)
 "-------initialization of the scheme--------------"
 a = case.a
 b = case.b
@@ -116,7 +116,7 @@ N_tstep = math.floor(tstep)
 c1 = lda * (1.0/4.0)
 c2 = nu * (1.0 - kappa) * lda2
 c3 = kappa * nu * lda2
-h_theta = (cell_size ** 0.5) * lda2
+h_theta = cell_size 
 d = kappa * (nu ** 2) * (1.0 - kappa) * lda2
 
 s = time.process_time()
@@ -179,7 +179,7 @@ E_0 = E_0 * cell_size
 #------------------------
 """Time-looping begins"""
 #------------------------
-num_steps = 100000
+num_steps = 1000
 energy = np.zeros(num_steps)
 tm = np.zeros(num_steps)
 for n in range(num_steps):
@@ -236,7 +236,7 @@ for n in range(num_steps):
     flx = f_ev - kappa * nu * f_dv
 
     """Matrix blocks corresponding to the linear system for solving tilde{w} and v"""
-    W1 = d_linsolv(flx, rho_0, c1, c2) #tilde{w} part of tilde{w} eqn
+    W1 = d_linsolv(flx, rho_0, c1, c2 * (1.0 + h_theta)) #tilde{w} part of tilde{w} eqn
     V1 = d_linsolv_dif(rho_0, d) #v part of tilde{w} eqn
     V2 = d_linsolv(flx, rho_0, c1, c3) #v part of v eqn
     W2 = d_linsolv_dif(rho_0, lda2) #tilde{w} part of w eqn
@@ -293,6 +293,7 @@ for n in range(num_steps):
 
     #twv -= twv.mean()
     tw, v = twv[:len(twv)//2], twv[len(twv)//2:]
+    v_update = v.copy()
     
     #ax.plot(x_dual, tw, label=r"$\tilde{w}$")
     # ax.plot(x_dual, v, label=r"$v$")   
@@ -395,7 +396,7 @@ for n in range(num_steps):
     tm[n] = dt * n
     print("step:", n)
 e = time.process_time()
-v_update = v.copy()
+#v_update = v.copy()
 #ax.plot(x_prim, rho_0, label=r"$\rho$, T_final")
 #ax.plot(x_dual, w_0, label=r"$w$, T_final")
 #ax.plot(x_dual, v_update, label=r"$v$")  
@@ -410,7 +411,7 @@ print(np.abs(error_tot))
 print(L1_tot_final)
 #error_v = v_init - tv
 error_v = tv - v_update
-error_l2_sq = np.sum(error_v**2) * cell_size
+error_l2_sq = np.sum(rho_init_d * error_v**2) * cell_size
 l2_norm_error_v = math.sqrt(error_l2_sq)
 print("error_v:", l2_norm_error_v)
 T_f = num_steps * dt

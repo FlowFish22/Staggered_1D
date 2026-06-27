@@ -98,7 +98,7 @@ nu = 1.0
 gamma = 2.0
 rho_initial_condition = fv.initial_condition.gaussian_rho
 u_initial_condition = fv.initial_condition.constant_u
-case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 10000, dt = 0.001, ng = 1)
+case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 1600, dt = 0.000625, ng = 1)
 "-------initialization of the scheme--------------"
 a = case.a
 b = case.b
@@ -136,7 +136,7 @@ v_init[1:-1] = (rho_init[1:] - rho_init[:-1])/(cell_size * 0.5 * (rho_init[0] + 
 v_init[0] = (rho_init[0] - rho_init[-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))                # left wrap
 v_init[-1] = (rho_init[0] - rho_init[-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))               # right wrap to close periodicity
 #Compute the discrete EFFECTIVE VELOCITY on DUAL CELLS
-w_0 = u_0 - kappa * nu * v_init
+#w_0 = u_0 - kappa * nu * v_init
 #----------------------------------plot discretized initial data--------------------------------------------------
 #x = np.linspace(0, 1, num=int(1e2))
 #rho0 = initial_condition(x)[1]
@@ -159,9 +159,13 @@ A = p_linsolv(u_0, lda, 0.0, neg, pos)
 #------------Solving for rho^0 from the corresponding linear problem--------------------------------------------------
 rho_0 = spm.spsolve(A, rho_init)
 
+v_0 = np.empty(len(rho_0)+1, dtype=rho_0.dtype)
+v_0[1:-1] = (rho_0[1:] - rho_0[:-1])/(cell_size * 0.5 * (rho_0[0] + rho_0[-1]))          # normal differences
+v_0[0] = (rho_0[0] - rho_0[-1])/(cell_size * 0.5 * (rho_0[0] + rho_0[-1]))                # left wrap
+v_0[-1] = (rho_0[0] - rho_0[-1])/(cell_size * 0.5 * (rho_0[0] + rho_0[-1]))               # right wrap to close periodicity
 # ax.plot(x_prim, rho_0, label=r"$\rho^0$, lin_solve")
 # ax.legend()
-
+w_0 = u_0 - kappa * nu * v_0
 d_linsolv = fv.solver_assembly.dual_linsolv
 d_linsolv_dif = fv.solver_assembly.dual_linsolv_dif
 build_mtx = fv.solver_assembly.build_matrix
@@ -179,7 +183,7 @@ E_0 = E_0 * cell_size
 #------------------------
 """Time-looping begins"""
 #------------------------
-num_steps = 1000
+num_steps = 1600
 energy = np.zeros(num_steps)
 tm = np.zeros(num_steps)
 for n in range(num_steps):

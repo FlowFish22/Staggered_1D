@@ -88,7 +88,7 @@ def v_cor(w, r1, r2, r3, r4, R, L, d, gm, dx):
 
 
 tf = 2.0
-kappa = 0.5
+kappa = 0.1
 nu = 1.0
 gamma = 2.0
 rho_initial_condition = fv.initial_condition.constant_rho
@@ -165,7 +165,7 @@ print(L1_tot)
 #------------------------
 """Time-looping begins"""
 #------------------------
-num_steps = 1
+num_steps = 100
 for n in range(num_steps):
     #Compute dual average of the discrete mass on the DUAL CELLS
     # rho_init_d = np.array([(0.5 * (rho_init[i+1]+rho_init[i])) for i in range(0,N-1)])

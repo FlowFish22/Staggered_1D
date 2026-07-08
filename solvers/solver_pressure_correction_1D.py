@@ -93,12 +93,12 @@ def v_cor(w, r1, r2, r3, r4, R, L, d, gm, dx):
 
 
 tf = 2.0
-kappa = 0.5
+kappa = 0.9
 nu = 1.0
 gamma = 2.0
 rho_initial_condition = fv.initial_condition.gaussian_rho
 u_initial_condition = fv.initial_condition.constant_u
-case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 2560, dt = 0.000390625, ng = 1)
+case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 1000, dt = 0.001, ng = 1)
 "-------initialization of the scheme--------------"
 a = case.a
 b = case.b
@@ -179,7 +179,7 @@ E_0 = E_0 * cell_size
 #------------------------
 """Time-looping begins"""
 #------------------------
-num_steps = 2560
+num_steps = 1000
 energy = np.zeros(num_steps)
 tm = np.zeros(num_steps)
 for n in range(num_steps):

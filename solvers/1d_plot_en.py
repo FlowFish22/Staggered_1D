@@ -16,16 +16,16 @@ increasing = np.diff(y) > 0
 # Plot
 plt.figure(figsize=(8, 6))
 
-plt.plot(x, y, 'b-', linewidth=1.5, label='y(x)')
+plt.plot(x, y, 'b-', linewidth=1.5, label="$E_{\kappa}(t)$")
 
 # Highlight increasing intervals
 for i in np.where(increasing)[0]:
     plt.plot(x[i:i+2], y[i:i+2],
              'r-', linewidth=2.5)
 
-plt.xlabel('x', fontsize=14)
-plt.ylabel('y', fontsize=14)
-plt.title('X vs Y Plot', fontsize=15)
+plt.xlabel('t', fontsize=14)
+plt.ylabel("$E_{\kappa}(t)$", fontsize=14)
+plt.title("$\kappa$-entropy dissipation after T=1", fontsize=15)
 
 plt.legend(fontsize=12)
 plt.grid(True, linestyle='--', alpha=0.4)

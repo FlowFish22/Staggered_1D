@@ -54,7 +54,7 @@ def H(x, p, p1):
     """
     x = np.clip(x, EPS, MAX_RHO)
     Hc_big = (1.0/p) * (1.0/(p - 1.0)) * np.power(x, p)
-    Hc_small = (1.0/(p1 * (p1 + 1.0) * np.power(x, p1))) + (1.0/p) + (1.0/p1)
+    Hc_small = (1.0/(p1 * (p1 + 1.0) * np.power(x, p1))) - (1.0/p) - (1.0/p1)
     H_cold =  np.where(x < 1.0, Hc_small, Hc_big)
     #pr = (1.0 + 1.0/p) * np.power(x, p) - (1.0/p1) * np.power(x, -8.0) + (1.0/p) + (1.0/p1)
     #return a_p * np.power(x, p)
@@ -100,8 +100,8 @@ def v_cor(w, r1, r2, r3, r4, R, L, d, gm, gm1, dx):
     term2 = term2_num / denom
     
     # Compute final corrected velocity
-    v = w + d * (v1 - term2)
-    #v = w - (d * term2)
+    #v = w + d * (v1 - term2)
+    v = w - (d * term2)
     # Final safety check
     if not np.isfinite(v):
         v = 0.0  # fallback
@@ -116,7 +116,7 @@ gamma = 2.0
 gamma_c = 4.0
 rho_initial_condition = fv.initial_condition.gaussian_rho
 u_initial_condition = fv.initial_condition.constant_u
-case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 100, dt = 0.001, ng = 1)
+case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 200, dt = 0.001, ng = 1)
 "-------initialization of the scheme--------------"
 a = case.a
 b = case.b
@@ -228,7 +228,7 @@ for n in range(num_steps):
     pr_grad[-1] = (safe_pow(rho_0[0], gamma, gamma_c) - safe_pow(rho_0[-1], gamma, gamma_c))/cell_size  # right wrap to close periodicity
 
     E = np.sum(0.5 * kappa * nu * nu * (1.0 - kappa) * rho_init_d * v_init * v_init) + np.sum(0.5 * rho_init_d * w_0 * w_0) 
-    + dt * dt * 0.5 * np.sum((pr_grad * pr_grad)/rho_init_d)
+    #+ dt * dt * 0.5 * np.sum((pr_grad * pr_grad)/rho_init_d)
     E = E * cell_size
     energy[n] = E
     tm[n] = dt * n
@@ -268,7 +268,7 @@ for n in range(num_steps):
     M = build_mtx(W1,V1, W2, V2)
     M = M.tocsc()
     """Compute the intermediate effective velocity and the drift velocity"""
-    rhs_tw = rho_init_d * w_0 - dt * sc_pr_grad #rhs of the w equation
+    rhs_tw = rho_init_d * w_0 #- dt * sc_pr_grad #rhs of the w equation
     rhs_v = rho_init_d * v_init #rhs of the v equation
     rhs_dual = np.concatenate((rhs_tw, rhs_v)) #build the vector on right hand side
     # twv = spsolve(M, rhs_dual) #vector (tw, v)

@@ -34,17 +34,34 @@ MAX_RHO = 1e6
 a_p = 1.0
 
 
-def safe_pow(x, p):
+def safe_pow(x, p, p1):
     """
     Safely raise x to the power gamma.
     Ensures x is at least EPS to avoid NaN/inf from negative or zero guesses.
     """
-    #x = np.clip(x, EPS, MAX_RHO)
-    pr = a_p * np.power(x, p) - (1.0/8.0) * a_p * np.power(x, -8.0)
-    return a_p * np.power(x, p)
-    #return pr
+    x = np.clip(x, EPS, MAX_RHO)
+    prc_big = (1.0/p) * np.power(x, p)
+    prc_small = -(1.0/(p1 * np.power(x, p1))) + (1.0/p) + (1.0/p1)
+    p_cold =  np.where(x < 1.0, prc_small, prc_big)
+    #pr = (1.0 + 1.0/p) * np.power(x, p) - (1.0/p1) * np.power(x, -8.0) + (1.0/p) + (1.0/p1)
+    #return a_p * np.power(x, p)
+    pr = np.power(x, p) + p_cold
+    return pr
 
-def v_scpr(a, b, c, d, gm, dx):
+def H(x, p, p1):
+    """
+    Helmholtz function for the internal energy.
+    """
+    x = np.clip(x, EPS, MAX_RHO)
+    Hc_big = (1.0/p) * (1.0/(p - 1.0)) * np.power(x, p)
+    Hc_small = (1.0/(p1 * (p1 + 1.0) * np.power(x, p1))) + (1.0/p) + (1.0/p1)
+    H_cold =  np.where(x < 1.0, Hc_small, Hc_big)
+    #pr = (1.0 + 1.0/p) * np.power(x, p) - (1.0/p1) * np.power(x, -8.0) + (1.0/p) + (1.0/p1)
+    #return a_p * np.power(x, p)
+    pr = (1.0/(p - 1.0)) * np.power(x, p) + H_cold
+    return pr
+
+def v_scpr(a, b, c, d, gm, gm1, dx):
     """
     Scaled pressure part of the velocity correction (safe version).
     """
@@ -53,7 +70,7 @@ def v_scpr(a, b, c, d, gm, dx):
     sqrt_val = np.sqrt(max(sqrt_arg, EPS))
     
     # Safe numerator
-    num = safe_pow(a, gm) - safe_pow(b, gm)
+    num = safe_pow(a, gm, gm1) - safe_pow(b, gm, gm1)
     
     denom = dx * sqrt_val
     denom = max(denom, EPS)
@@ -65,26 +82,26 @@ def v_scpr(a, b, c, d, gm, dx):
         v = 0.0  # fallback
     return v
 
-def v_cor(w, r1, r2, r3, r4, R, L, d, gm, dx):
+def v_cor(w, r1, r2, r3, r4, R, L, d, gm, gm1, dx):
     """
     Corrected velocity after eliminating w^{n+1} safely for nonlinear solvers.
     """
     # Compute v_scpr safely
-    v1 = v_scpr(r1, r2, r3, r4, gm, dx)
+    v1 = v_scpr(r1, r2, r3, r4, gm, gm1, dx)
     
     # Safe denominator for the second term
     denom = dx * 0.5 * (r1 + r2)
     #denom = max(denom, EPS)
     
     # Safe numerator for the second term
-    term2_num = safe_pow(R, gm) - safe_pow(L, gm)
+    term2_num = safe_pow(R, gm, gm1) - safe_pow(L, gm, gm1)
     
    
     term2 = term2_num / denom
     
     # Compute final corrected velocity
     v = w + d * (v1 - term2)
-    
+    #v = w - (d * term2)
     # Final safety check
     if not np.isfinite(v):
         v = 0.0  # fallback
@@ -93,12 +110,13 @@ def v_cor(w, r1, r2, r3, r4, R, L, d, gm, dx):
 
 
 tf = 2.0
-kappa = 0.6
+kappa = 0.5
 nu = 1.0
 gamma = 2.0
+gamma_c = 4.0
 rho_initial_condition = fv.initial_condition.gaussian_rho
 u_initial_condition = fv.initial_condition.constant_u
-case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 200, dt = 0.0001, ng = 1)
+case = fv.computational_case(a = -3.0, b = 3.0, Tf = 0.5, N = 100, dt = 0.001, ng = 1)
 "-------initialization of the scheme--------------"
 a = case.a
 b = case.b
@@ -179,7 +197,7 @@ E_0 = E_0 * cell_size
 #------------------------
 """Time-looping begins"""
 #------------------------
-num_steps = 10000
+num_steps = 1000
 energy = np.zeros(num_steps)
 tm = np.zeros(num_steps)
 for n in range(num_steps):
@@ -191,23 +209,29 @@ for n in range(num_steps):
     rho_init_d[-1] = 0.5 * (rho_init[0] + rho_init[-1])  # right wrap to close periodicity
     
     #\tilde_v with taking care of the offsetting
-    tv = np.empty(len(rho_init)+1, dtype=rho_init.dtype)
-    tv[1:-1] = (rho_init[1:] - rho_init[:-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))          # normal differences
-    tv[0] = (rho_init[0] - rho_init[-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))                # left wrap
-    tv[-1] = (rho_init[0] - rho_init[-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))               # right wrap to close periodicity
+    # tv = np.empty(len(rho_init)+1, dtype=rho_init.dtype)
+    # tv[1:-1] = (rho_init[1:] - rho_init[:-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))          # normal differences
+    # tv[0] = (rho_init[0] - rho_init[-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))                # left wrap
+    # tv[-1] = (rho_init[0] - rho_init[-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))               # right wrap to close periodicity
     
     rho_0_d = np.empty(len(rho_0)+1, dtype=rho_0.dtype)
     rho_0_d[1:-1] = 0.5 * (rho_0[1:] + rho_0[:-1])          
     rho_0_d[0] = 0.5 * (rho_0[0] + rho_0[-1])   # left wrap
     rho_0_d[-1] = 0.5 * (rho_0[0] + rho_0[-1])  # right wrap to close periodicity
     
-
+    
     #Pressure scaling step: compute the scaled pressure gradient on the DUAL CELLS
     """Pressure gradient from the previous step"""
     pr_grad = np.empty(len(rho_0)+1, dtype=rho_0.dtype)
-    pr_grad[1:-1] = (safe_pow(rho_0[1:], gamma) - safe_pow(rho_0[:-1], gamma))/cell_size       
-    pr_grad[0] = (safe_pow(rho_0[0], gamma) - safe_pow(rho_0[-1], gamma))/cell_size  # left wrap
-    pr_grad[-1] = (safe_pow(rho_0[0], gamma) - safe_pow(rho_0[-1], gamma))/cell_size  # right wrap to close periodicity
+    pr_grad[1:-1] = (safe_pow(rho_0[1:], gamma, gamma_c) - safe_pow(rho_0[:-1], gamma, gamma_c))/cell_size       
+    pr_grad[0] = (safe_pow(rho_0[0], gamma, gamma_c) - safe_pow(rho_0[-1], gamma, gamma_c))/cell_size  # left wrap
+    pr_grad[-1] = (safe_pow(rho_0[0], gamma, gamma_c) - safe_pow(rho_0[-1], gamma, gamma_c))/cell_size  # right wrap to close periodicity
+
+    E = np.sum(0.5 * kappa * nu * nu * (1.0 - kappa) * rho_init_d * v_init * v_init) + np.sum(0.5 * rho_init_d * w_0 * w_0) 
+    + dt * dt * 0.5 * np.sum((pr_grad * pr_grad)/rho_init_d)
+    E = E * cell_size
+    energy[n] = E
+    tm[n] = dt * n
     """Pressure scaling"""
     sc_pr_grad = np.sqrt(rho_0_d / rho_init_d) * pr_grad #the scaled pressure
 
@@ -294,6 +318,7 @@ for n in range(num_steps):
     #twv -= twv.mean()
     tw, v = twv[:len(twv)//2], twv[len(twv)//2:]
     v_update = v.copy()
+    v_init = v_update
     
     #ax.plot(x_dual, tw, label=r"$\tilde{w}$")
     # ax.plot(x_dual, v, label=r"$v$")   
@@ -317,9 +342,9 @@ for n in range(num_steps):
             dtlap = (r[ip] - 2.0 * r[i] + r[im]) * lda2
 
             flx_r = f_up(r[i], r[ip],
-                      v_cor(tw[iR], rho_0[ip], rho_0[i], rho_init[ip], rho_init[i], r[ip], r[i], dt, gamma, cell_size))
+                      v_cor(tw[iR], rho_0[ip], rho_0[i], rho_init[ip], rho_init[i], r[ip], r[i], dt, gamma, gamma_c, cell_size))
             flx_l = f_up(r[im], r[i],
-                      v_cor(tw[iL], rho_0[i], rho_0[im], rho_init[i], rho_init[im], r[i], r[im], dt, gamma, cell_size))
+                      v_cor(tw[iL], rho_0[i], rho_0[im], rho_init[i], rho_init[im], r[i], r[im], dt, gamma, gamma_c, cell_size))
             f[i] = lda * (flx_r - flx_l) - kappa * nu * dtlap  #- rho_0[i]
 
         return f
@@ -339,9 +364,9 @@ for n in range(num_steps):
             dtlap = (r[ip] - 2.0 * r[i] + r[im]) * lda2
 
             flx_r = f_sm(r[i], r[ip],
-                      v_cor(tw[iR], rho_0[ip], rho_0[i], rho_init[ip], rho_init[i], r[ip], r[i], dt, gamma, cell_size))
+                      v_cor(tw[iR], rho_0[ip], rho_0[i], rho_init[ip], rho_init[i], r[ip], r[i], dt, gamma, gamma_c, cell_size))
             flx_l = f_sm(r[im], r[i],
-                      v_cor(tw[iL], rho_0[i], rho_0[im], rho_init[i], rho_init[im], r[i], r[im], dt, gamma, cell_size))
+                      v_cor(tw[iL], rho_0[i], rho_0[im], rho_init[i], rho_init[im], r[i], r[im], dt, gamma, gamma_c, cell_size))
             f[i] = lda * (flx_r - flx_l) - kappa * nu * dtlap  #- rho_0[i]
 
         return f
@@ -377,32 +402,31 @@ for n in range(num_steps):
     print("newton krylov solve ... ", flush=True, end='')
     rho = newton_krylov(Gsm, rho, method='lgmres', inner_maxiter=2, outer_k=10, f_tol=1e-12)
     print("done!")
+
     rho_per = per_bd(rho, nghost)
     rho_init_per = per_bd(rho_init, nghost)
     """w^{n+1} correction"""
     w = np.array([v_cor(tw[i], rho_0_per[i+1], rho_0_per[i], rho_init_per[i+1], 
-                        rho_init_per[i], rho_per[i+1], rho_per[i], dt, gamma, cell_size) for i in range(0,N+1)])
+                        rho_init_per[i], rho_per[i+1], rho_per[i], dt, gamma, gamma_c, cell_size) for i in range(0,N+1)])
+    #\tilde_v \del_x rho^{n+1}/rho^{n+1}
+    tv = np.empty(len(rho)+1, dtype=rho.dtype)
+    tv[1:-1] = (rho[1:] - rho[:-1])/(cell_size * 0.5 * (rho[0] + rho[-1]))          # normal differences
+    tv[0] = (rho[0] - rho[-1])/(cell_size * 0.5 * (rho[0] + rho[-1]))                # left wrap
+    tv[-1] = (rho[0] - rho[-1])/(cell_size * 0.5 * (rho[0] + rho[-1]))               # right wrap to close periodicity
+
     rho_init = rho_0.copy()
     rho_0 = rho.copy()
     w_0 = w.copy()
-    v_init = v.copy()
-    # v_init = np.empty(len(rho_0)+1, dtype=rho_0.dtype)
-    # v_init[1:-1] = (rho_0[1:] - rho_0[:-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))          # normal differences
-    # v_init[0] = (rho_0[0] - rho_0[-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))                # left wrap
-    # v_init[-1] = (rho_0[0] - rho_0[-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))               # right wrap to close periodicity
-    E = np.sum(np.pow(rho_0,gamma)) + np.sum(0.5 * kappa * nu * nu * (1.0 - kappa) * rho_0_d * v_init * v_init) + np.sum(0.5 * rho_0_d * w_0 * w_0)
-    E = E * cell_size
-    energy[n] = E
-    tm[n] = dt * n
+    
     print("step:", n)
 e = time.process_time()
 #v_update = v.copy()
 #ax.plot(x_prim, rho_0, label=r"$\rho$, T_final")
 #ax.plot(x_dual, w_0, label=r"$w$, T_final")
 #ax.plot(x_dual, v_update, label=r"$v$")  
-u = w_0 + kappa * nu * v_init
+u = w_0 + kappa * nu * v_update
 #ax.plot(x_dual, u, label=r"$u$, T_final")
-ax.plot(x_dual, v_update, label=r"$v$, T_final")
+ax.plot(x_dual, v_update, label=r"$v$")
 ax.plot(x_dual, tv, label=r"$\tilde{v}$")
 ax.legend()
 L1_tot_final = np.sum(rho_0)
@@ -419,9 +443,9 @@ T_f = num_steps * dt
 #ax.set_xlabel(r"$t$")
 #ax.set_ylabel(r"$E_\kappa(t)/E^0_kappa$")
 ax.legend()
-#plt.plot(energy)
-#plt.xlabel("time steps")
-#plt.ylabel("Total energy")
+# plt.plot(energy)
+# plt.xlabel("time steps")
+# plt.ylabel("Total energy")
 #plt.yscale("log")
 #plt.show()
 out = np.column_stack((tm, energy))
@@ -429,7 +453,7 @@ np.savetxt(
     "kappa0p5_totEn.dat",
     out
 )
-f.savefig('engy_kappa0p5.png')
+f.savefig('v_vs_tv_kapp0p5.png')
 print("Final T:", T_f)
 print(e - s, 'seconds')
 

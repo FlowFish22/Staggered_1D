@@ -100,8 +100,8 @@ def v_cor(w, r1, r2, r3, r4, R, L, d, gm, gm1, dx):
     term2 = term2_num / denom
     
     # Compute final corrected velocity
-    #v = w + d * (v1 - term2)
-    v = w - (d * term2)
+    v = w + d * (v1 - term2)
+    #v = w - (d * term2)
     # Final safety check
     if not np.isfinite(v):
         v = 0.0  # fallback
@@ -209,16 +209,21 @@ for n in range(num_steps):
     rho_init_d[-1] = 0.5 * (rho_init[0] + rho_init[-1])  # right wrap to close periodicity
     
     #\tilde_v with taking care of the offsetting
-    # tv = np.empty(len(rho_init)+1, dtype=rho_init.dtype)
-    # tv[1:-1] = (rho_init[1:] - rho_init[:-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))          # normal differences
-    # tv[0] = (rho_init[0] - rho_init[-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))                # left wrap
-    # tv[-1] = (rho_init[0] - rho_init[-1])/(cell_size * 0.5 * (rho_init[0] + rho_init[-1]))               # right wrap to close periodicity
+    tv = np.empty(len(rho_init)+1, dtype=rho_init.dtype)
+    tv[1:-1] = (rho_0[1:] - rho_0[:-1])/(cell_size * 0.5 * (rho_0[0] + rho_0[-1]))          # normal differences
+    tv[0] = (rho_0[0] - rho_0[-1])/(cell_size * 0.5 * (rho_0[0] + rho_0[-1]))                # left wrap
+    tv[-1] = (rho_0[0] - rho_0[-1])/(cell_size * 0.5 * (rho_0[0] + rho_0[-1]))               # right wrap to close periodicity
     
     rho_0_d = np.empty(len(rho_0)+1, dtype=rho_0.dtype)
     rho_0_d[1:-1] = 0.5 * (rho_0[1:] + rho_0[:-1])          
     rho_0_d[0] = 0.5 * (rho_0[0] + rho_0[-1])   # left wrap
     rho_0_d[-1] = 0.5 * (rho_0[0] + rho_0[-1])  # right wrap to close periodicity
     
+    # #\tilde_v \del_x rho^{n}/rho^{n}
+    # tv = np.empty(len(rho)+1, dtype=rho.dtype)
+    # tv[1:-1] = (rho[1:] - rho[:-1])/(cell_size * 0.5 * (rho[0] + rho[-1]))          # normal differences
+    # tv[0] = (rho[0] - rho[-1])/(cell_size * 0.5 * (rho[0] + rho[-1]))                # left wrap
+    # tv[-1] = (rho[0] - rho[-1])/(cell_size * 0.5 * (rho[0] + rho[-1]))               # right wrap to close periodicity
     
     #Pressure scaling step: compute the scaled pressure gradient on the DUAL CELLS
     """Pressure gradient from the previous step"""
@@ -228,7 +233,7 @@ for n in range(num_steps):
     pr_grad[-1] = (safe_pow(rho_0[0], gamma, gamma_c) - safe_pow(rho_0[-1], gamma, gamma_c))/cell_size  # right wrap to close periodicity
 
     E = np.sum(0.5 * kappa * nu * nu * (1.0 - kappa) * rho_init_d * v_init * v_init) + np.sum(0.5 * rho_init_d * w_0 * w_0) 
-    #+ dt * dt * 0.5 * np.sum((pr_grad * pr_grad)/rho_init_d)
+    + dt * dt * 0.5 * np.sum((pr_grad * pr_grad)/rho_init_d)
     E = E * cell_size
     energy[n] = E
     tm[n] = dt * n
@@ -268,7 +273,7 @@ for n in range(num_steps):
     M = build_mtx(W1,V1, W2, V2)
     M = M.tocsc()
     """Compute the intermediate effective velocity and the drift velocity"""
-    rhs_tw = rho_init_d * w_0 #- dt * sc_pr_grad #rhs of the w equation
+    rhs_tw = rho_init_d * w_0 - dt * sc_pr_grad #rhs of the w equation
     rhs_v = rho_init_d * v_init #rhs of the v equation
     rhs_dual = np.concatenate((rhs_tw, rhs_v)) #build the vector on right hand side
     # twv = spsolve(M, rhs_dual) #vector (tw, v)
@@ -408,11 +413,11 @@ for n in range(num_steps):
     """w^{n+1} correction"""
     w = np.array([v_cor(tw[i], rho_0_per[i+1], rho_0_per[i], rho_init_per[i+1], 
                         rho_init_per[i], rho_per[i+1], rho_per[i], dt, gamma, gamma_c, cell_size) for i in range(0,N+1)])
-    #\tilde_v \del_x rho^{n+1}/rho^{n+1}
-    tv = np.empty(len(rho)+1, dtype=rho.dtype)
-    tv[1:-1] = (rho[1:] - rho[:-1])/(cell_size * 0.5 * (rho[0] + rho[-1]))          # normal differences
-    tv[0] = (rho[0] - rho[-1])/(cell_size * 0.5 * (rho[0] + rho[-1]))                # left wrap
-    tv[-1] = (rho[0] - rho[-1])/(cell_size * 0.5 * (rho[0] + rho[-1]))               # right wrap to close periodicity
+    # #\tilde_v \del_x rho^{n+1}/rho^{n+1}
+    # tv = np.empty(len(rho)+1, dtype=rho.dtype)
+    # tv[1:-1] = (rho[1:] - rho[:-1])/(cell_size * 0.5 * (rho[0] + rho[-1]))          # normal differences
+    # tv[0] = (rho[0] - rho[-1])/(cell_size * 0.5 * (rho[0] + rho[-1]))                # left wrap
+    # tv[-1] = (rho[0] - rho[-1])/(cell_size * 0.5 * (rho[0] + rho[-1]))               # right wrap to close periodicity
 
     rho_init = rho_0.copy()
     rho_0 = rho.copy()

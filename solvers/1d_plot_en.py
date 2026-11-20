@@ -25,7 +25,7 @@ for i in np.where(increasing)[0]:
 
 plt.xlabel('t', fontsize=14)
 plt.ylabel("$E_{\kappa}(t)$", fontsize=14)
-plt.title("$\kappa$-entropy dissipation after T=1", fontsize=15)
+#plt.title("$\kappa$-entropy dissipation after T=1", fontsize=15)
 
 plt.legend(fontsize=12)
 #plt.grid(True, linestyle='--', alpha=0.4)

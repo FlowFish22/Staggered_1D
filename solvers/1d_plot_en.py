@@ -28,12 +28,12 @@ plt.ylabel("$E_{\kappa}(t)$", fontsize=14)
 plt.title("$\kappa$-entropy dissipation after T=1", fontsize=15)
 
 plt.legend(fontsize=12)
-plt.grid(True, linestyle='--', alpha=0.4)
+#plt.grid(True, linestyle='--', alpha=0.4)
 
 plt.tight_layout()
 
 # Save figure
-plt.savefig('kappa0p5_totEn_plot.png', dpi=300)
+plt.savefig('kappa0p5_totEn_plot_new.png', dpi=300)
 
 plt.show()
 

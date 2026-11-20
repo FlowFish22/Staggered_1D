@@ -40,9 +40,9 @@ def safe_pow(x, p, p1):
     Ensures x is at least EPS to avoid NaN/inf from negative or zero guesses.
     """
     x = np.clip(x, EPS, MAX_RHO)
-    prc_big = (1.0/p) * np.power(x, p)
-    prc_small = -(1.0/(p1 * np.power(x, p1))) + (1.0/p) + (1.0/p1)
-    p_cold =  np.where(x < 1.0, prc_small, prc_big)
+    prc_big = (1.0/p) * np.power(x, p) - (1.0/p) - (1.0/p1)
+    prc_small = -(1.0/(p1 * np.power(x, p1)))
+    p_cold =  np.where(x <= 1.0, prc_small, prc_big)
     #pr = (1.0 + 1.0/p) * np.power(x, p) - (1.0/p1) * np.power(x, -8.0) + (1.0/p) + (1.0/p1)
     #return a_p * np.power(x, p)
     pr = np.power(x, p) + p_cold
@@ -53,9 +53,9 @@ def H(x, p, p1):
     Helmholtz function for the internal energy.
     """
     x = np.clip(x, EPS, MAX_RHO)
-    Hc_big = (1.0/p) * (1.0/(p - 1.0)) * np.power(x, p)
-    Hc_small = (1.0/(p1 * (p1 + 1.0) * np.power(x, p1))) - (1.0/p) - (1.0/p1)
-    H_cold =  np.where(x < 1.0, Hc_small, Hc_big)
+    Hc_big = ((np.power(x, gamma) - 1.0)/(gamma * (gamma - 1.0))) - ((x - 1.0)/(gamma_c + 1.0))
+    Hc_small = (x**(-gamma_c) - x)/(gamma_c * (gamma_c + 1.0))
+    H_cold =  np.where(x <= 1.0, Hc_small, Hc_big)
     #pr = (1.0 + 1.0/p) * np.power(x, p) - (1.0/p1) * np.power(x, -8.0) + (1.0/p) + (1.0/p1)
     #return a_p * np.power(x, p)
     pr = (1.0/(p - 1.0)) * np.power(x, p) + H_cold
@@ -192,13 +192,22 @@ rho_init_d = np.empty(len(rho_init)+1, dtype=rho_init.dtype)
 rho_init_d[1:-1] = 0.5 * (rho_init[1:] + rho_init[:-1])          
 rho_init_d[0] = 0.5 * (rho_init[0] + rho_init[-1])   # left wrap
 rho_init_d[-1] = 0.5 * (rho_init[0] + rho_init[-1])  # right wrap to close periodicity
-E_0 = np.sum(np.pow(rho_init,gamma)) + np.sum(0.5 * kappa * nu * nu * (1.0 - kappa) * rho_init_d * v_init * v_init) + np.sum(0.5 * rho_init_d * w_0 * w_0)
+
+"""Pressure gradient from the previous step"""
+pr_grad = np.empty(len(rho_0)+1, dtype=rho_0.dtype)
+pr_grad[1:-1] = (safe_pow(rho_0[1:], gamma, gamma_c) - safe_pow(rho_0[:-1], gamma, gamma_c))/cell_size       
+pr_grad[0] = (safe_pow(rho_0[0], gamma, gamma_c) - safe_pow(rho_0[-1], gamma, gamma_c))/cell_size  # left wrap
+pr_grad[-1] = (safe_pow(rho_0[0], gamma, gamma_c) - safe_pow(rho_0[-1], gamma, gamma_c))/cell_size  # right wrap to close periodicity
+
+E_0 = np.sum(H(rho_0, gamma, gamma_c)) + np.sum(0.5 * kappa * nu * nu * (1.0 - kappa) * rho_init_d * v_init * v_init) + np.sum(0.5 * rho_init_d * w_0 * w_0) 
++ dt * dt * 0.5 * np.sum((pr_grad * pr_grad)/rho_init_d)
 E_0 = E_0 * cell_size
 #------------------------
 """Time-looping begins"""
 #------------------------
 num_steps = 1000
 energy = np.zeros(num_steps)
+logen = np.zeros(num_steps)
 tm = np.zeros(num_steps)
 for n in range(num_steps):
     #Compute dual average of the discrete mass on the DUAL CELLS
@@ -232,10 +241,11 @@ for n in range(num_steps):
     pr_grad[0] = (safe_pow(rho_0[0], gamma, gamma_c) - safe_pow(rho_0[-1], gamma, gamma_c))/cell_size  # left wrap
     pr_grad[-1] = (safe_pow(rho_0[0], gamma, gamma_c) - safe_pow(rho_0[-1], gamma, gamma_c))/cell_size  # right wrap to close periodicity
 
-    E = np.sum(0.5 * kappa * nu * nu * (1.0 - kappa) * rho_init_d * v_init * v_init) + np.sum(0.5 * rho_init_d * w_0 * w_0) 
+    E = np.sum(H(rho_0, gamma, gamma_c)) + np.sum(0.5 * kappa * nu * nu * (1.0 - kappa) * rho_init_d * v_init * v_init) + np.sum(0.5 * rho_init_d * w_0 * w_0) 
     + dt * dt * 0.5 * np.sum((pr_grad * pr_grad)/rho_init_d)
     E = E * cell_size
     energy[n] = E
+    logen[n] = np.log(E/E_0)
     tm[n] = dt * n
     """Pressure scaling"""
     sc_pr_grad = np.sqrt(rho_0_d / rho_init_d) * pr_grad #the scaled pressure
@@ -434,6 +444,7 @@ u = w_0 + kappa * nu * v_update
 ax.plot(x_dual, v_update, label=r"$v$")
 ax.plot(x_dual, tv, label=r"$\tilde{v}$")
 ax.legend()
+plt.grid(True, linestyle='--', alpha=0.4)
 L1_tot_final = np.sum(rho_0)
 error_tot = L1_tot - L1_tot_final
 print(np.abs(error_tot)) 
@@ -456,6 +467,11 @@ ax.legend()
 out = np.column_stack((tm, energy))
 np.savetxt(
     "kappa0p5_totEn.dat",
+    out
+)
+out_log = np.column_stack((tm, logen))
+np.savetxt(
+    "kappa0p5_totEn_log.dat",
     out
 )
 f.savefig('v_vs_tv_kapp0p5.png')
